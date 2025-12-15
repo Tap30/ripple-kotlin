@@ -1,6 +1,6 @@
 # Android Module
 
-Android-specific Ripple SDK implementation with lifecycle awareness.
+Pure Kotlin JVM library for Android integration with Ripple SDK.
 
 ## Public API
 
@@ -8,7 +8,7 @@ Android-specific Ripple SDK implementation with lifecycle awareness.
 ```kotlin
 class AndroidRippleClient(context: Context, config: RippleConfig) : RippleClient(config) {
     // Inherits all RippleClient methods
-    // Automatically manages Android session lifecycle
+    // Uses Android Context for platform-specific features
 }
 ```
 
@@ -25,6 +25,11 @@ class AndroidLogAdapter(tag: String = "Ripple", logLevel: LogLevel = LogLevel.WA
 ```
 
 ## Usage
+Add to your Android app's `build.gradle.kts`:
+```kotlin
+implementation("com.tapsioss.ripple:android:1.0.0")
+```
+
 ```kotlin
 val config = RippleConfig(
     apiKey = "your-api-key",
@@ -44,7 +49,15 @@ lifecycleScope.launch {
 ```
 
 ## Features
-- Automatic session management tied to app lifecycle
+- Pure Kotlin JVM library (no Android AGP required)
 - SharedPreferences-based event persistence
+- Android platform detection (device, OS info)
 - OkHttp integration for reliable networking
-- Android Log integration
+- Lightweight with minimal dependencies
+
+## Benefits of Pure Kotlin Approach
+- No Android Gradle Plugin dependency
+- Faster compilation
+- Can be used in any Kotlin/Java project
+- Smaller artifact size
+- No Android manifest required

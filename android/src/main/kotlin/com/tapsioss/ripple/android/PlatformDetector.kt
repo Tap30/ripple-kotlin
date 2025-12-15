@@ -1,6 +1,5 @@
 package com.tapsioss.ripple.android
 
-import android.content.Context
 import android.os.Build
 import com.tapsioss.ripple.core.DeviceInfo
 import com.tapsioss.ripple.core.OsInfo
@@ -9,7 +8,7 @@ import com.tapsioss.ripple.core.Platform
 /**
  * Detects Android platform information
  */
-class PlatformDetector(private val context: Context) {
+class PlatformDetector {
     
     fun getPlatform(): Platform.Android {
         return Platform.Android(

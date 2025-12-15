@@ -4,7 +4,6 @@ import android.content.Context
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
-import java.util.*
 
 /**
  * Android-specific Ripple client implementation
@@ -14,8 +13,8 @@ class AndroidRippleClient(
     config: RippleConfig
 ) : RippleClient(config) {
     
-    private val sessionManager = SessionManager(context)
-    private val platformDetector = PlatformDetector(context)
+    private val sessionManager = SessionManager()
+    private val platformDetector = PlatformDetector()
 
     override suspend fun init() {
         sessionManager.initSession()
@@ -25,9 +24,4 @@ class AndroidRippleClient(
     override fun getSessionId(): String? = sessionManager.getSessionId()
 
     override fun getPlatform(): Platform = platformDetector.getPlatform()
-
-    override fun dispose() {
-        super.dispose()
-        sessionManager.dispose()
-    }
 }

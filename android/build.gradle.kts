@@ -1,29 +1,20 @@
 plugins {
-    alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
-}
-
-android {
-    namespace = "com.tapsioss.ripple.android"
-    compileSdk = 34
-
-    defaultConfig {
-        minSdk = 21
-        targetSdk = 34
-    }
-
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-    }
-
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
+    alias(libs.plugins.kotlin.jvm)
+    `java-library`
 }
 
 dependencies {
     api(project(":core"))
     implementation(libs.okhttp)
-    implementation(libs.androidx.lifecycle.process)
+    
+    // Use provided scope for Android dependencies
+    compileOnly("com.google.android:android:4.1.1.4")
+    
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
