@@ -5,6 +5,17 @@ plugins {
     alias(libs.plugins.spring.dependency.management)
 }
 
+// Disable bootJar since this is a library, not an application
+tasks.bootJar {
+    enabled = false
+}
+
+// Enable plain jar
+tasks.jar {
+    enabled = true
+    archiveClassifier = ""
+}
+
 dependencies {
     api(project(":core"))
     implementation(libs.spring.boot.starter.webflux)

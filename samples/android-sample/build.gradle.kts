@@ -29,4 +29,5 @@ dependencies {
     implementation(project(":android"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.okhttp)
 }
