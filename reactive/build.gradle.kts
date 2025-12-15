@@ -1,9 +1,17 @@
 plugins {
-    id("kotlin-jvm-convention")
+    alias(libs.plugins.kotlin.jvm)
 }
 
 dependencies {
     api(project(":core"))
     implementation(libs.kotlinx.coroutines.reactive)
     implementation(libs.reactor.core)
+    
+    testImplementation(libs.junit.jupiter)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }
