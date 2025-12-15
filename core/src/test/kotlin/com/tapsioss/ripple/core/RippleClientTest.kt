@@ -49,7 +49,7 @@ class RippleClientTest {
         coVerify { storageAdapter.load() }
         verify { loggerAdapter.info("RippleClient initialized") }
     }
-wh
+
     @Test
     fun `when tracking before init, then exception is thrown`() = runTest {
         val client = TestRippleClient(config)
