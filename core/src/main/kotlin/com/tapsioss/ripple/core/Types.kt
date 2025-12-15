@@ -1,5 +1,9 @@
 package com.tapsioss.ripple.core
 
+import com.tapsioss.ripple.core.adapters.HttpAdapter
+import com.tapsioss.ripple.core.adapters.LoggerAdapter
+import com.tapsioss.ripple.core.adapters.StorageAdapter
+
 /**
  * Configuration for Ripple client
  */

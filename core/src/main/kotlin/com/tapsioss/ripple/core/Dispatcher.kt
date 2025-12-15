@@ -43,7 +43,7 @@ class Dispatcher(
         eventChannel.trySend(event)
         loggerAdapter?.debug("Event enqueued: ${event.name}")
         
-        if (eventChannel.isEmpty.not() && getQueueSize() >= config.maxBatchSize) {
+        if (getQueueSize() >= config.maxBatchSize) {
             flush()
         }
     }
@@ -59,8 +59,13 @@ class Dispatcher(
             val events = mutableListOf<Event>()
             
             // Drain all events from channel
-            while (!eventChannel.isEmpty) {
-                eventChannel.tryReceive().getOrNull()?.let { events.add(it) }
+            while (true) {
+                val result = eventChannel.tryReceive()
+                if (result.isSuccess) {
+                    events.add(result.getOrThrow())
+                } else {
+                    break
+                }
             }
             
             if (events.isEmpty()) return@withLock
@@ -123,7 +128,7 @@ class Dispatcher(
         flushJob = scope.launch {
             while (!isDisposed) {
                 delay(config.flushInterval)
-                if (!isDisposed && !eventChannel.isEmpty) {
+                if (!isDisposed && hasEvents()) {
                     flush()
                 }
             }
@@ -143,6 +148,11 @@ class Dispatcher(
     private fun getQueueSize(): Int {
         // Approximate size since Channel doesn't expose exact count
         return if (eventChannel.isEmpty) 0 else config.maxBatchSize
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun hasEvents(): Boolean {
+        return !eventChannel.isEmpty
     }
 
     private fun calculateBackoffDelay(attempt: Int): Long {

@@ -10,7 +10,7 @@ import kotlinx.coroutines.SupervisorJob
 abstract class RippleClient(
     protected val config: RippleConfig
 ) {
-    protected val metadataManager = MetadataManager()
+    internal val metadataManager = MetadataManager()
     protected val dispatcher = Dispatcher(
         config = Dispatcher.DispatcherConfig(
             endpoint = config.endpoint,
