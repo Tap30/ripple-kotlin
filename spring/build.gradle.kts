@@ -11,6 +11,7 @@ dependencies {
     implementation(libs.spring.boot.starter.data.jpa)
     implementation(libs.jackson.module.kotlin)
     implementation(libs.slf4j.api)
+    implementation(libs.kotlinx.coroutines.reactive)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

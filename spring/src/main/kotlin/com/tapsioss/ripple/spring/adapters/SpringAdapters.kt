@@ -7,7 +7,7 @@ import com.tapsioss.ripple.core.adapters.HttpAdapter
 import com.tapsioss.ripple.core.adapters.LogLevel
 import com.tapsioss.ripple.core.adapters.LoggerAdapter
 import com.tapsioss.ripple.core.adapters.StorageAdapter
-import kotlinx.coroutines.reactor.awaitSingle
+import kotlinx.coroutines.reactive.awaitSingle
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.web.reactive.function.client.WebClient

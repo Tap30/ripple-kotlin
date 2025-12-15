@@ -13,6 +13,7 @@ import kotlin.random.Random
 /**
  * Queue management, batching, and retry logic
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class Dispatcher(
     private val config: DispatcherConfig,
     private val httpAdapter: HttpAdapter,
@@ -43,7 +44,7 @@ class Dispatcher(
         eventChannel.trySend(event)
         loggerAdapter?.debug("Event enqueued: ${event.name}")
         
-        if (getQueueSize() >= config.maxBatchSize) {
+        if (!eventChannel.isEmpty && getQueueSize() >= config.maxBatchSize) {
             flush()
         }
     }
@@ -59,13 +60,8 @@ class Dispatcher(
             val events = mutableListOf<Event>()
             
             // Drain all events from channel
-            while (true) {
-                val result = eventChannel.tryReceive()
-                if (result.isSuccess) {
-                    events.add(result.getOrThrow())
-                } else {
-                    break
-                }
+            while (!eventChannel.isEmpty) {
+                eventChannel.tryReceive().getOrNull()?.let { events.add(it) }
             }
             
             if (events.isEmpty()) return@withLock
@@ -128,7 +124,7 @@ class Dispatcher(
         flushJob = scope.launch {
             while (!isDisposed) {
                 delay(config.flushInterval)
-                if (!isDisposed && hasEvents()) {
+                if (!isDisposed && !eventChannel.isEmpty) {
                     flush()
                 }
             }
@@ -144,15 +140,9 @@ class Dispatcher(
         eventChannel.close()
     }
 
-    @OptIn(ExperimentalCoroutinesApi::class)
     private fun getQueueSize(): Int {
-        // Approximate size since Channel doesn't expose exact count
-        return if (eventChannel.isEmpty) 0 else config.maxBatchSize
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun hasEvents(): Boolean {
-        return !eventChannel.isEmpty
+        // Approximate size for batch triggering  
+        return if (!eventChannel.isEmpty) config.maxBatchSize else 0
     }
 
     private fun calculateBackoffDelay(attempt: Int): Long {
