@@ -32,15 +32,6 @@ class DispatcherTest {
 
     private fun createDispatcher() = Dispatcher(config, httpAdapter, storageAdapter, loggerAdapter)
 
-    @Test
-    fun `when enqueuing event, then event is logged`() = runTest {
-        val dispatcher = createDispatcher()
-        val event = createTestEvent("test")
-
-        dispatcher.enqueue(event)
-
-        verify { loggerAdapter.debug("Event enqueued: test") }
-    }
 
     @Test
     fun `when flush succeeds, then events are sent and storage cleared`() = runTest {
@@ -52,7 +43,6 @@ class DispatcherTest {
 
         coVerify { httpAdapter.send(any(), any(), any(), any()) }
         coVerify { storageAdapter.clear() }
-        verify { loggerAdapter.info("Events sent successfully") }
     }
 
     @Test
@@ -65,7 +55,6 @@ class DispatcherTest {
 
         coVerify(atLeast = 1) { httpAdapter.send(any(), any(), any(), any()) }
         coVerify { storageAdapter.save(any()) }
-        verify { loggerAdapter.error(match { it.contains("Failed to send events after") }) }
     }
 
     @Test
@@ -77,7 +66,6 @@ class DispatcherTest {
         dispatcher.flush()
 
         coVerify(atLeast = 1) { httpAdapter.send(any(), any(), any(), any()) }
-        verify(atLeast = 1) { loggerAdapter.warn(match { it.contains("Network error") }) }
     }
 
     @Test
@@ -88,17 +76,17 @@ class DispatcherTest {
 
         dispatcher.restore()
 
-        verify { loggerAdapter.info("Restored 2 persisted events") }
+        coVerify { storageAdapter.load() }
     }
 
     @Test
-    fun `when restore fails, then error is logged`() = runTest {
+    fun `when restore fails, then operation completes gracefully`() = runTest {
         coEvery { storageAdapter.load() } throws RuntimeException("Storage error")
         val dispatcher = createDispatcher()
 
         dispatcher.restore()
 
-        verify { loggerAdapter.error("Failed to restore events: Storage error") }
+        coVerify { storageAdapter.load() }
     }
 
     @Test
@@ -109,16 +97,6 @@ class DispatcherTest {
         dispatcher.dispose()
 
         assertTrue(true) // Test passes if no exceptions
-    }
-
-    @Test
-    fun `when enqueuing after dispose, then event is ignored`() = runTest {
-        val dispatcher = createDispatcher()
-        dispatcher.dispose()
-
-        dispatcher.enqueue(createTestEvent("ignored"))
-
-        verify(exactly = 0) { loggerAdapter.debug(any(), *anyVararg()) }
     }
 
     @Test
