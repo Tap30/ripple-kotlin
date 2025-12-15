@@ -1,11 +1,11 @@
 plugins {
-    kotlin("jvm") version "1.9.21" apply false
-    kotlin("android") version "1.9.21" apply false
-    kotlin("plugin.spring") version "1.9.21" apply false
-    id("com.android.application") version "8.1.4" apply false
-    id("com.android.library") version "8.1.4" apply false
-    id("org.springframework.boot") version "3.2.0" apply false
-    id("io.spring.dependency-management") version "1.1.4" apply false
+    alias(libs.plugins.kotlin.jvm) apply false
+    alias(libs.plugins.kotlin.android) apply false
+    alias(libs.plugins.kotlin.spring) apply false
+    alias(libs.plugins.android.application) apply false
+    alias(libs.plugins.android.library) apply false
+    alias(libs.plugins.spring.boot) apply false
+    alias(libs.plugins.spring.dependency.management) apply false
 }
 
 allprojects {

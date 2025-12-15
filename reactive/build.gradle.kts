@@ -1,9 +1,9 @@
 plugins {
-    kotlin("jvm")
+    id("kotlin-jvm-convention")
 }
 
 dependencies {
     api(project(":core"))
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactive:1.7.3")
-    implementation("io.projectreactor:reactor-core:3.6.0")
+    implementation(libs.kotlinx.coroutines.reactive)
+    implementation(libs.reactor.core)
 }
