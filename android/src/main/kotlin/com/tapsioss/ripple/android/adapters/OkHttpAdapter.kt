@@ -13,12 +13,24 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
 /**
- * OkHttp-based HTTP adapter for Android
+ * OkHttp-based HTTP adapter for reliable network requests on Android.
+ * 
+ * @param client OkHttp client instance, uses default if not provided
  */
 class OkHttpAdapter(
     private val client: OkHttpClient = OkHttpClient()
 ) : HttpAdapter {
     
+    /**
+     * Send events to remote endpoint using OkHttp.
+     * Automatically serializes events to JSON and handles network errors.
+     * 
+     * @param endpoint Target API endpoint URL
+     * @param events List of events to send
+     * @param headers HTTP headers to include
+     * @param apiKeyHeader API key header name
+     * @return HTTP response with success status and optional response data
+     */
     override suspend fun send(
         endpoint: String,
         events: List<Event>,

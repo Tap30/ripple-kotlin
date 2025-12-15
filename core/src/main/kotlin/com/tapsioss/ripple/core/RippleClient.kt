@@ -29,7 +29,8 @@ abstract class RippleClient(
     protected var isInitialized = false
 
     /**
-     * Initialize client and restore persisted events
+     * Initialize the client and restore any persisted events from storage.
+     * Must be called before tracking events.
      */
     open suspend fun init() {
         dispatcher.restore()
@@ -39,7 +40,11 @@ abstract class RippleClient(
     }
 
     /**
-     * Track an event
+     * Track an event with optional payload and metadata.
+     * 
+     * @param name Event name identifier
+     * @param payload Optional event data as key-value pairs
+     * @param metadata Optional event-specific metadata that merges with shared metadata
      */
     suspend fun track(
         name: String,
@@ -63,21 +68,25 @@ abstract class RippleClient(
     }
 
     /**
-     * Set global metadata
+     * Set shared metadata that will be attached to all subsequent events.
+     * 
+     * @param key Metadata key
+     * @param value Metadata value
      */
     fun setMetadata(key: String, value: Any) {
         metadataManager.set(key, value)
     }
 
     /**
-     * Flush queued events
+     * Immediately flush all queued events to the server.
      */
     suspend fun flush() {
         dispatcher.flush()
     }
 
     /**
-     * Clean up resources
+     * Clean up resources and stop background operations.
+     * Call when the client is no longer needed.
      */
     open fun dispose() {
         dispatcher.dispose()
@@ -85,12 +94,14 @@ abstract class RippleClient(
     }
 
     /**
-     * Get session ID (platform-specific implementation)
+     * Get session ID for the current client instance.
+     * Platform-specific implementation.
      */
     protected abstract fun getSessionId(): String?
 
     /**
-     * Get platform information (platform-specific implementation)
+     * Get platform information for event context.
+     * Platform-specific implementation.
      */
     protected abstract fun getPlatform(): Platform?
 
