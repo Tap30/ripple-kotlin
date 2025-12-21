@@ -1,147 +1,154 @@
-# Publishing Setup Guide
+# Publishing to Maven Central
 
-This guide explains how to set up publishing for the Ripple Kotlin SDK to Maven Central.
+This guide explains how to publish the Ripple Kotlin SDK to Maven Central.
 
 ## Prerequisites
 
-### 1. Create Sonatype Account
+### 1. Create Sonatype OSSRH Account
 
-1. Go to [Sonatype JIRA](https://issues.sonatype.org/secure/Signup!default.jspa)
-2. Create an account
-3. Create a new issue to request access to `com.tapsioss` group ID:
-   - Project: Community Support - Open Source Project Repository Hosting (OSSRH)
-   - Issue Type: New Project
+1. **Sign up for Sonatype JIRA:**
+   - Go to [Sonatype JIRA](https://issues.sonatype.org/secure/Signup!default.jspa)
+   - Create an account with your email
+
+2. **Create a New Project ticket:**
+   - Project: `Community Support - Open Source Project Repository Hosting (OSSRH)`
+   - Issue Type: `New Project`
+   - Summary: `Request for com.tapsioss group ID`
    - Group Id: `com.tapsioss`
    - Project URL: `https://github.com/Tap30/ripple-kotlin`
    - SCM URL: `https://github.com/Tap30/ripple-kotlin.git`
-4. Wait for approval (usually takes 1-2 business days)
+   - Description: `Ripple Kotlin SDK - Event tracking library for Kotlin/Java`
 
-### 2. Generate GPG Key
+3. **Wait for approval** (usually 1-2 business days)
+
+### 2. Generate GPG Key for Signing
 
 ```bash
-# Generate a new GPG key
+# Generate GPG key
 gpg --gen-key
+# Follow prompts: use your email, set a passphrase
 
-# List keys to get the key ID
+# List keys to get the key ID (last 8 characters)
 gpg --list-secret-keys --keyid-format LONG
 
-# Export the public key to upload to key servers
-gpg --armor --export YOUR_KEY_ID
-
-# Upload to key servers
+# Export public key and upload to key servers
+gpg --armor --export YOUR_KEY_ID > public-key.asc
 gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
 gpg --keyserver keys.openpgp.org --send-keys YOUR_KEY_ID
+
+# Export secret key for GitHub Actions
+gpg --armor --export-secret-keys YOUR_KEY_ID > private-key.asc
 ```
 
-### 3. Set Up Credentials
-
-#### Option A: Local gradle.properties
+### 3. Set Up Local Credentials
 
 Create `~/.gradle/gradle.properties`:
 
 ```properties
-# Sonatype credentials
-sonatypeUsername=your_sonatype_username
-sonatypePassword=your_sonatype_password
+# OSSRH credentials (from Sonatype JIRA account)
+ossrhUsername=your_jira_username
+ossrhPassword=your_jira_password
 
 # GPG signing
 signing.keyId=YOUR_KEY_ID
 signing.password=your_gpg_passphrase
-signing.secretKeyRingFile=/path/to/secring.gpg
+signing.secretKeyRingFile=/Users/yourusername/.gnupg/secring.gpg
 ```
 
-#### Option B: Environment Variables
+### 4. GitHub Repository Secrets
 
-```bash
-export SONATYPE_USERNAME=your_sonatype_username
-export SONATYPE_PASSWORD=your_sonatype_password
-export SIGNING_KEY_ID=YOUR_KEY_ID
-export SIGNING_PASSWORD=your_gpg_passphrase
-export SIGNING_SECRET_KEY_RING_FILE=/path/to/secring.gpg
-```
+Add these secrets in GitHub: **Settings → Secrets and variables → Actions**
 
-### 4. GitHub Secrets (for CI/CD)
-
-Add these secrets to your GitHub repository settings:
-
-- `SONATYPE_USERNAME`: Your Sonatype username
-- `SONATYPE_PASSWORD`: Your Sonatype password
-- `SIGNING_KEY_ID`: Your GPG key ID
+- `OSSRH_USERNAME`: Your Sonatype JIRA username
+- `OSSRH_PASSWORD`: Your Sonatype JIRA password  
+- `SIGNING_KEY_ID`: Your GPG key ID (last 8 characters)
 - `SIGNING_PASSWORD`: Your GPG key passphrase
-- `SIGNING_SECRET_KEY_RING_FILE`: Base64 encoded GPG secret key ring
+- `SIGNING_SECRET_KEY_RING_FILE`: Base64 encoded private key
 
-To encode the GPG key ring:
+To encode the private key:
 ```bash
-base64 ~/.gnupg/secring.gpg | pbcopy  # macOS
-base64 ~/.gnupg/secring.gpg | xclip   # Linux
+# macOS
+base64 -i private-key.asc | pbcopy
+
+# Linux  
+base64 private-key.asc | xclip -selection clipboard
 ```
 
 ## Publishing Process
 
-### Manual Publishing
-
-1. **Create and push a git tag:**
-   ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
-   ```
-
-2. **Publish to staging:**
-   ```bash
-   ./gradlew publishToSonatype
-   ```
-
-3. **Close and release:**
-   ```bash
-   ./gradlew closeAndReleaseSonatypeStagingRepository
-   ```
-
 ### Automated Publishing (Recommended)
 
-1. **Push a tag:**
+1. **Create and push a version tag:**
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
 
-2. **GitHub Actions will automatically:**
-   - Run tests
-   - Build artifacts
-   - Publish to Maven Central
-   - Create GitHub release
+2. **GitHub Actions automatically:**
+   - Runs all tests
+   - Builds all artifacts (core, android, spring, reactive)
+   - Signs with GPG
+   - Publishes to Maven Central staging
+   - Releases to public Maven Central
+   - Creates GitHub release
 
-## Version Management
+### Manual Publishing
 
-Versions are automatically determined from git tags:
+```bash
+# Publish to staging
+./gradlew publishToSonatype
 
-- Tagged releases: `v1.0.0` → `1.0.0`
-- Development builds: `commit-hash-SNAPSHOT`
+# Close and release staging repository
+./gradlew closeAndReleaseSonatypeStagingRepository
+```
 
 ## Verification
 
-After publishing, verify your artifacts at:
-- [Maven Central Search](https://search.maven.org/search?q=g:com.tapsioss.ripple)
-- [Sonatype Repository](https://s01.oss.sonatype.org/#nexus-search;quick~com.tapsioss.ripple)
+After publishing, verify at:
+- **Maven Central:** https://search.maven.org/search?q=g:com.tapsioss.ripple
+- **Sonatype Nexus:** https://s01.oss.sonatype.org/#nexus-search;quick~com.tapsioss.ripple
+
+## Usage for Consumers
+
+Once published, users can add dependencies:
+
+```kotlin
+// Core module
+implementation("com.tapsioss.ripple:core:1.0.0")
+
+// Android module  
+implementation("com.tapsioss.ripple:android:1.0.0")
+
+// Spring Boot module
+implementation("com.tapsioss.ripple:spring:1.0.0")
+
+// Reactive module
+implementation("com.tapsioss.ripple:reactive:1.0.0")
+```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **GPG signing fails:**
-   - Ensure GPG key is properly configured
-   - Check that the key hasn't expired
-   - Verify the passphrase is correct
+1. **"Unauthorized" error:**
+   - Verify OSSRH credentials are correct
+   - Ensure your account has access to `com.tapsioss` group
 
-2. **Sonatype authentication fails:**
-   - Double-check username/password
-   - Ensure your account has access to the group ID
+2. **GPG signing fails:**
+   - Check GPG key hasn't expired: `gpg --list-keys`
+   - Verify passphrase is correct
+   - Ensure key is uploaded to key servers
 
 3. **Staging repository not found:**
    - Wait a few minutes after publishing
-   - Check Sonatype Nexus UI for staging repositories
+   - Check [Sonatype Nexus UI](https://s01.oss.sonatype.org/#stagingRepositories)
+
+4. **Version already exists:**
+   - Maven Central doesn't allow overwriting versions
+   - Create a new version tag
 
 ### Getting Help
 
-- [Sonatype Documentation](https://central.sonatype.org/publish/)
+- [Maven Central Documentation](https://central.sonatype.org/publish/)
 - [Gradle Nexus Publish Plugin](https://github.com/gradle-nexus/publish-plugin)
-- [GitHub Issues](https://github.com/Tap30/ripple-kotlin/issues)
+- [Sonatype Support](https://issues.sonatype.org)
