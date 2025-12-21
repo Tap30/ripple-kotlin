@@ -9,31 +9,10 @@ plugins {
     alias(libs.plugins.nexus.publish)
 }
 
-// Get version from git tags
-fun getVersionFromGit(): String {
-    return try {
-        val stdout = java.io.ByteArrayOutputStream()
-        exec {
-            commandLine("git", "describe", "--tags", "--always", "--dirty")
-            standardOutput = stdout
-            isIgnoreExitValue = true
-        }
-        val version = stdout.toString().trim()
-        
-        when {
-            version.isEmpty() -> "0.1.0-SNAPSHOT"
-            version.startsWith("v") -> version.substring(1)
-            else -> "$version-SNAPSHOT"
-        }
-    } catch (e: Exception) {
-        "0.1.0-SNAPSHOT"
-    }
-}
-
-// Set version from git tags
+// Set version from gradle.properties
 allprojects {
     group = "com.tapsioss.ripple"
-    version = getVersionFromGit()
+    version = property("VERSION_NAME") as String
 
     repositories {
         google()

@@ -2,7 +2,7 @@
 
 A high-performance event tracking SDK for Kotlin and Java applications.
 
-## Installation
+## Download
 
 ```kotlin
 // Android
@@ -13,6 +13,9 @@ implementation("com.tapsioss.ripple:spring:1.0.0")
 
 // Reactive
 implementation("com.tapsioss.ripple:reactive:1.0.0")
+
+// Core (for custom implementations)
+implementation("com.tapsioss.ripple:core:1.0.0")
 ```
 
 ## Quick Start
@@ -38,6 +41,7 @@ lifecycleScope.launch {
 - [Detailed Documentation](AGENTS.md) - Complete API reference and examples
 - [Publishing Guide](PUBLISHING.md) - How to publish to Maven Central
 - [Contributing](CONTRIBUTING.md) - Development guidelines
+- [Changelog](CHANGELOG.md) - Release history
 
 ## License
 
