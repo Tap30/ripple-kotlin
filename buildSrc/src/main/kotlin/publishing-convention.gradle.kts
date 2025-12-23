@@ -24,7 +24,6 @@ publishing {
                     developer {
                         id.set("tap30")
                         name.set("Tap30 Team")
-                        email.set("developers@tap30.org")
                     }
                 }
                 
