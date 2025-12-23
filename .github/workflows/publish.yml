@@ -1,4 +1,4 @@
-name: Publish to Maven Central
+name: Publish to GitHub Packages
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     
     steps:
     - uses: actions/checkout@v4
@@ -34,15 +37,19 @@ jobs:
     - name: Run tests
       run: ./gradlew test
     
-    - name: Publish to Maven Central
-      run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
-      env:
-        # TODO: Add these secrets to GitHub repository settings -> Settings -> Secrets and variables -> Actions
-        OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
-        OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
-        SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
-        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
-        SIGNING_SECRET_KEY_RING_FILE: ${{ secrets.SIGNING_SECRET_KEY_RING_FILE }}
+    - name: Publish to GitHub Packages
+      run: ./gradlew publishMavenPublicationToGitHubPackagesRepository
+      # No env needed - uses GITHUB_ACTOR and GITHUB_TOKEN automatically
+    
+    # TODO: Uncomment when ready for Maven Central
+    # - name: Publish to Maven Central
+    #   run: ./gradlew publishToSonatype closeAndReleaseSonatypeStagingRepository
+    #   env:
+    #     OSSRH_USERNAME: ${{ secrets.OSSRH_USERNAME }}
+    #     OSSRH_PASSWORD: ${{ secrets.OSSRH_PASSWORD }}
+    #     SIGNING_KEY_ID: ${{ secrets.SIGNING_KEY_ID }}
+    #     SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+    #     SIGNING_SECRET_KEY_RING_FILE: ${{ secrets.SIGNING_SECRET_KEY_RING_FILE }}
     
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1

@@ -6,7 +6,8 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
-    alias(libs.plugins.nexus.publish)
+    // TODO: Uncomment when ready for Maven Central
+    // alias(libs.plugins.nexus.publish)
 }
 
 // Set version from gradle.properties
@@ -17,21 +18,26 @@ allprojects {
     repositories {
         google()
         mavenCentral()
-    }
-}
-
-// Configure Maven Central publishing
-nexusPublishing {
-    repositories {
-        sonatype {
-            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-            
-            // TODO: Set these credentials in ~/.gradle/gradle.properties or GitHub secrets
-            // ossrhUsername=your_sonatype_username
-            // ossrhPassword=your_sonatype_password
-            username.set(findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME"))
-            password.set(findProperty("ossrhPassword") as String? ?: System.getenv("OSSRH_PASSWORD"))
+        // Add GitHub Packages for consuming dependencies
+        maven {
+            url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
+            credentials {
+                username = System.getenv("GITHUB_ACTOR") ?: findProperty("githubUsername") as String?
+                password = System.getenv("GITHUB_TOKEN") ?: findProperty("githubToken") as String?
+            }
         }
     }
 }
+
+// TODO: Uncomment when ready for Maven Central
+// nexusPublishing {
+//     repositories {
+//         sonatype {
+//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+//             
+//             username.set(findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME"))
+//             password.set(findProperty("ossrhPassword") as String? ?: System.getenv("OSSRH_PASSWORD"))
+//         }
+//     }
+// }
