@@ -1,33 +1,9 @@
-# Security Policy
+# Reporting Security Issues
 
-## Supported Versions
+If you believe you have found a security vulnerability in this repo and its
+packages, we encourage you to let us know right away. We will investigate all
+legitimate reports and do our best to quickly fix the problem.
 
-We release patches for security vulnerabilities. Which versions are eligible for receiving such patches depends on the CVSS v3.0 Rating:
+## How to let us know?
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-
-## Reporting a Vulnerability
-
-Please report (suspected) security vulnerabilities to **developers@tap30.org**. You will receive a response from us within 48 hours. If the issue is confirmed, we will release a patch as soon as possible depending on complexity but historically within a few days.
-
-## Security Measures
-
-- All dependencies are regularly updated
-- Code is scanned for vulnerabilities using automated tools
-- Security best practices are followed in development
-- Regular security audits are performed
-
-## Disclosure Policy
-
-When we receive a security bug report, we will:
-
-1. Confirm the problem and determine the affected versions
-2. Audit code to find any potential similar problems
-3. Prepare fixes for all releases still under maintenance
-4. Release new versions as soon as possible
-
-## Comments on this Policy
-
-If you have suggestions on how this process could be improved please submit a pull request.
+- [Open up an issue](<https://github.com/Tap30/ripple-kotlin/issues/new?assignees=behnawwm&labels=security&projects=&template=bug_report.md&title=fix(security):>)
