@@ -70,9 +70,10 @@ class RippleClientTest {
     }
 
     @Test
-    fun `when tracking event with only name, then event is created with nulls`() = runTest {
+    fun `when tracking event with only name, then event is created with nulls`() {
         val client = TestRippleClient(config)
         client.init()
+        Thread.sleep(100) // Allow init to complete
 
         client.track("simple_event")
 

@@ -17,7 +17,7 @@ interface HttpAdapter {
      * @param apiKeyHeader Name of the API key header
      * @return HTTP response with status and optional data
      */
-    suspend fun send(
+    fun send(
         endpoint: String,
         events: List<Event>,
         headers: Map<String, String>,
@@ -35,19 +35,19 @@ interface StorageAdapter {
      * 
      * @param events List of events to persist
      */
-    suspend fun save(events: List<Event>)
+    fun save(events: List<Event>)
     
     /**
      * Load previously saved events from storage.
      * 
      * @return List of persisted events, empty if none found
      */
-    suspend fun load(): List<Event>
+    fun load(): List<Event>
     
     /**
      * Clear all persisted events from storage.
      */
-    suspend fun clear()
+    fun clear()
 }
 
 /**

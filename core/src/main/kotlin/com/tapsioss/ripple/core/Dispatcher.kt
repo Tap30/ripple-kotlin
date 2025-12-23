@@ -3,27 +3,25 @@ package com.tapsioss.ripple.core
 import com.tapsioss.ripple.core.adapters.HttpAdapter
 import com.tapsioss.ripple.core.adapters.LoggerAdapter
 import com.tapsioss.ripple.core.adapters.StorageAdapter
-import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.pow
 import kotlin.random.Random
 
 /**
  * Queue management, batching, and retry logic
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class Dispatcher(
     private val config: DispatcherConfig,
     private val httpAdapter: HttpAdapter,
     private val storageAdapter: StorageAdapter,
     private val loggerAdapter: LoggerAdapter?
 ) {
-    private val eventChannel = Channel<Event>(Channel.UNLIMITED)
-    private val flushMutex = Mutex()
-    private var flushJob: Job? = null
-    private var isDisposed = false
+    private val eventQueue = ConcurrentLinkedQueue<Event>()
+    private val isDisposed = AtomicBoolean(false)
+    private var scheduledFlushTask: java.util.concurrent.ScheduledFuture<*>? = null
 
     data class DispatcherConfig(
         val endpoint: String,
@@ -37,14 +35,13 @@ class Dispatcher(
     /**
      * Add event to queue
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun enqueue(event: Event) {
-        if (isDisposed) return
+    fun enqueue(event: Event) {
+        if (isDisposed.get()) return
         
-        eventChannel.trySend(event)
+        eventQueue.offer(event)
         loggerAdapter?.debug("Event enqueued: ${event.name}")
         
-        if (!eventChannel.isEmpty && getQueueSize() >= config.maxBatchSize) {
+        if (eventQueue.size >= config.maxBatchSize) {
             flush()
         }
     }
@@ -52,26 +49,25 @@ class Dispatcher(
     /**
      * Send queued events
      */
-    @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun flush() {
-        if (isDisposed) return
+    fun flush() {
+        if (isDisposed.get()) return
         
-        flushMutex.withLock {
+        synchronized(this) {
             val events = mutableListOf<Event>()
             
-            // Drain all events from channel
-            while (!eventChannel.isEmpty) {
-                eventChannel.tryReceive().getOrNull()?.let { events.add(it) }
+            // Drain all events from queue
+            while (eventQueue.isNotEmpty()) {
+                eventQueue.poll()?.let { events.add(it) }
             }
             
-            if (events.isEmpty()) return@withLock
+            if (events.isEmpty()) return
             
             loggerAdapter?.info("Flushing ${events.size} events")
             
             var attempt = 0
             var success = false
             
-            while (attempt < config.maxRetries && !success && !isDisposed) {
+            while (attempt < config.maxRetries && !success && !isDisposed.get()) {
                 try {
                     val headers = mapOf(config.apiKeyHeader to config.apiKey)
                     val response = httpAdapter.send(config.endpoint, events, headers, config.apiKeyHeader)
@@ -90,14 +86,14 @@ class Dispatcher(
                     if (attempt < config.maxRetries) {
                         val delay = calculateBackoffDelay(attempt)
                         loggerAdapter?.debug("Retrying in ${delay}ms")
-                        delay(delay)
+                        Thread.sleep(delay)
                     }
                 }
             }
             
             if (!success) {
                 // Re-queue events and persist
-                events.forEach { eventChannel.trySend(it) }
+                events.forEach { eventQueue.offer(it) }
                 storageAdapter.save(events)
                 loggerAdapter?.error("Failed to send events after ${config.maxRetries} attempts")
             }
@@ -107,10 +103,10 @@ class Dispatcher(
     /**
      * Load persisted events
      */
-    suspend fun restore() {
+    fun restore() {
         try {
             val events = storageAdapter.load()
-            events.forEach { eventChannel.trySend(it) }
+            events.forEach { eventQueue.offer(it) }
             loggerAdapter?.info("Restored ${events.size} persisted events")
         } catch (e: Exception) {
             loggerAdapter?.error("Failed to restore events: ${e.message}")
@@ -120,30 +116,23 @@ class Dispatcher(
     /**
      * Start scheduled flushing
      */
-    fun startScheduledFlush(scope: CoroutineScope) {
-        flushJob = scope.launch {
-            while (!isDisposed) {
-                delay(config.flushInterval)
-                if (!isDisposed && !eventChannel.isEmpty) {
-                    flush()
-                }
+    fun startScheduledFlush(executor: ScheduledExecutorService) {
+        scheduledFlushTask = executor.scheduleWithFixedDelay({
+            if (!isDisposed.get() && eventQueue.isNotEmpty()) {
+                flush()
             }
-        }
+        }, config.flushInterval, config.flushInterval, TimeUnit.MILLISECONDS)
     }
 
     /**
      * Clean up resources
      */
     fun dispose() {
-        isDisposed = true
-        flushJob?.cancel()
-        eventChannel.close()
+        isDisposed.set(true)
+        scheduledFlushTask?.cancel(false)
     }
 
-    private fun getQueueSize(): Int {
-        // Approximate size for batch triggering  
-        return if (!eventChannel.isEmpty) config.maxBatchSize else 0
-    }
+    fun getQueueSize(): Int = eventQueue.size
 
     private fun calculateBackoffDelay(attempt: Int): Long {
         val baseDelay = 1000L

@@ -23,7 +23,7 @@ class AndroidRippleClient(
      * Initialize client and start session tracking.
      * Automatically detects Android device and OS information.
      */
-    override suspend fun init() {
+    override fun init() {
         sessionManager.initSession()
         super.init()
     }

@@ -40,8 +40,11 @@ jobs:
         build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
         build-scan-terms-of-use-agree: "yes"
     
-    - name: Build and test
-      run: ./gradlew build --no-daemon
+    - name: Build
+      run: gradle build --no-daemon
+    
+    - name: Run tests
+      run: gradle test --no-daemon
     
     - name: Upload test results
       uses: actions/upload-artifact@v4

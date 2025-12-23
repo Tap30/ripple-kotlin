@@ -26,7 +26,7 @@ class SharedPreferencesAdapter(
      * 
      * @param events List of events to persist
      */
-    override suspend fun save(events: List<Event>) {
+    override fun save(events: List<Event>) {
         val eventsJson = json.encodeToString(events)
         prefs.edit().putString("events", eventsJson).apply()
     }
@@ -36,7 +36,7 @@ class SharedPreferencesAdapter(
      * 
      * @return List of events, empty if none found or parsing fails
      */
-    override suspend fun load(): List<Event> {
+    override fun load(): List<Event> {
         val eventsJson = prefs.getString("events", null) ?: return emptyList()
         return try {
             json.decodeFromString<List<Event>>(eventsJson)
@@ -48,7 +48,7 @@ class SharedPreferencesAdapter(
     /**
      * Clear all saved events from SharedPreferences.
      */
-    override suspend fun clear() {
+    override fun clear() {
         prefs.edit().remove("events").apply()
     }
 }

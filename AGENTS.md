@@ -43,12 +43,10 @@ val config = RippleConfig(
 
 val client = AndroidRippleClient(context, config)
 
-// Track events
-lifecycleScope.launch {
-    client.init()
-    client.track("user_login", mapOf("method" to "google"))
-    client.flush()
-}
+// Track events - No coroutines needed!
+client.init()
+client.track("user_login", mapOf("method" to "google"))
+client.flush()
 ```
 
 ### Spring Boot
@@ -72,11 +70,11 @@ fun rippleClient(): SpringRippleClient {
     return SpringRippleClient(config)
 }
 
-// Usage
+// Usage - No suspend functions!
 @Service
 class UserService(private val rippleClient: SpringRippleClient) {
     
-    suspend fun createUser(user: User) {
+    fun createUser(user: User) {
         // Business logic...
         
         rippleClient.track("user_created", mapOf(

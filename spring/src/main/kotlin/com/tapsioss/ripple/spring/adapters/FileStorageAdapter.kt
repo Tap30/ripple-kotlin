@@ -15,7 +15,7 @@ class FileStorageAdapter(
     private val objectMapper: ObjectMapper = ObjectMapper()
 ) : StorageAdapter {
     
-    override suspend fun save(events: List<Event>) {
+    override fun save(events: List<Event>) {
         try {
             val json = objectMapper.writeValueAsString(events)
             Files.write(Paths.get(filePath), json.toByteArray())
@@ -24,7 +24,7 @@ class FileStorageAdapter(
         }
     }
 
-    override suspend fun load(): List<Event> {
+    override fun load(): List<Event> {
         return try {
             val file = File(filePath)
             if (file.exists()) {
@@ -38,7 +38,7 @@ class FileStorageAdapter(
         }
     }
 
-    override suspend fun clear() {
+    override fun clear() {
         try {
             Files.deleteIfExists(Paths.get(filePath))
         } catch (e: Exception) {

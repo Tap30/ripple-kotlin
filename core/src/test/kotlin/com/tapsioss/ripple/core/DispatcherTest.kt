@@ -90,11 +90,13 @@ class DispatcherTest {
     }
 
     @Test
-    fun `when dispatcher is disposed, then scheduled flush stops`() = runTest {
+    fun `when dispatcher is disposed, then scheduled flush stops`() {
         val dispatcher = createDispatcher()
-        dispatcher.startScheduledFlush(this)
-
+        val executor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+        
+        dispatcher.startScheduledFlush(executor)
         dispatcher.dispose()
+        executor.shutdown()
 
         assertTrue(true) // Test passes if no exceptions
     }

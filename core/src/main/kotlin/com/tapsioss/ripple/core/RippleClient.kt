@@ -1,8 +1,8 @@
 package com.tapsioss.ripple.core
 
 import com.tapsioss.ripple.core.adapters.LoggerAdapter
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.SupervisorJob
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
 
 /**
  * Abstract base client for Ripple SDK
@@ -25,18 +25,20 @@ abstract class RippleClient(
         loggerAdapter = config.adapters.loggerAdapter
     )
     
-    protected val clientScope = CoroutineScope(SupervisorJob())
+    protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
     protected var isInitialized = false
 
     /**
      * Initialize the client and restore any persisted events from storage.
      * Must be called before tracking events.
      */
-    open suspend fun init() {
-        dispatcher.restore()
-        dispatcher.startScheduledFlush(clientScope)
-        isInitialized = true
-        config.adapters.loggerAdapter?.info("RippleClient initialized")
+    open fun init() {
+        executor.execute {
+            dispatcher.restore()
+            dispatcher.startScheduledFlush(executor)
+            isInitialized = true
+            config.adapters.loggerAdapter?.info("RippleClient initialized")
+        }
     }
 
     /**
@@ -46,7 +48,7 @@ abstract class RippleClient(
      * @param payload Optional event data as key-value pairs
      * @param metadata Optional event-specific metadata that merges with shared metadata
      */
-    suspend fun track(
+    fun track(
         name: String,
         payload: Map<String, Any>? = null,
         metadata: Map<String, Any>? = null
@@ -64,7 +66,9 @@ abstract class RippleClient(
             platform = getPlatform()
         )
 
-        dispatcher.enqueue(event)
+        executor.execute {
+            dispatcher.enqueue(event)
+        }
     }
 
     /**
@@ -80,8 +84,10 @@ abstract class RippleClient(
     /**
      * Immediately flush all queued events to the server.
      */
-    suspend fun flush() {
-        dispatcher.flush()
+    fun flush() {
+        executor.execute {
+            dispatcher.flush()
+        }
     }
 
     /**
@@ -89,7 +95,10 @@ abstract class RippleClient(
      * Call when the client is no longer needed.
      */
     open fun dispose() {
-        dispatcher.dispose()
+        executor.execute {
+            dispatcher.dispose()
+        }
+        executor.shutdown()
         config.adapters.loggerAdapter?.info("RippleClient disposed")
     }
 
