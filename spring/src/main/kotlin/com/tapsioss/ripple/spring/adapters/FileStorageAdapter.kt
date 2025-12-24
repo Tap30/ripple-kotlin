@@ -1,48 +1,62 @@
 package com.tapsioss.ripple.spring.adapters
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
+import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.tapsioss.ripple.core.Event
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import java.io.File
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 
 /**
- * File-based storage adapter for Spring
+ * File-based storage adapter for Spring applications.
+ * 
+ * Persists events to a JSON file for offline support and retry.
+ * Thread-safe through file locking.
+ * 
+ * @param storagePath Path to the storage file (default: ripple_events.json in temp directory)
+ * @param objectMapper Jackson ObjectMapper for JSON serialization
  */
 class FileStorageAdapter(
-    private val filePath: String = "./ripple_events.json",
-    private val objectMapper: ObjectMapper = ObjectMapper()
+    private val storagePath: Path = Files.createTempDirectory("ripple").resolve("events.json"),
+    private val objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 ) : StorageAdapter {
     
+    private val file: File = storagePath.toFile()
+    private val lock = Any()
+
     override fun save(events: List<Event>) {
-        try {
-            val json = objectMapper.writeValueAsString(events)
-            Files.write(Paths.get(filePath), json.toByteArray())
-        } catch (e: Exception) {
-            // Log error but don't throw to prevent event loss
+        if (events.isEmpty()) return
+        
+        synchronized(lock) {
+            try {
+                file.parentFile?.mkdirs()
+                objectMapper.writeValue(file, events)
+            } catch (e: Exception) {
+                // Silently fail
+            }
         }
     }
 
     override fun load(): List<Event> {
-        return try {
-            val file = File(filePath)
-            if (file.exists()) {
-                val json = Files.readString(Paths.get(filePath))
-                objectMapper.readValue(json, Array<Event>::class.java).toList()
-            } else {
+        synchronized(lock) {
+            return try {
+                if (!file.exists()) return emptyList()
+                objectMapper.readValue(file)
+            } catch (e: Exception) {
                 emptyList()
             }
-        } catch (e: Exception) {
-            emptyList()
         }
     }
 
     override fun clear() {
-        try {
-            Files.deleteIfExists(Paths.get(filePath))
-        } catch (e: Exception) {
-            // Ignore deletion errors
+        synchronized(lock) {
+            try {
+                file.delete()
+            } catch (e: Exception) {
+                // Silently fail
+            }
         }
     }
 }

@@ -1,16 +1,29 @@
 package com.tapsioss.ripple.core
 
-import com.tapsioss.ripple.core.adapters.LoggerAdapter
-import java.util.concurrent.Executors
-import java.util.concurrent.ScheduledExecutorService
-
 /**
- * Abstract base client for Ripple SDK
+ * Abstract base client for Ripple SDK.
+ * 
+ * Provides a simple, non-blocking API for event tracking with automatic
+ * batching, retry logic, and offline persistence. All public methods are
+ * thread-safe and can be called from any thread.
+ * 
+ * Example usage:
+ * ```kotlin
+ * val client = AndroidRippleClient(context, config)
+ * client.init()
+ * client.setMetadata("user_id", "12345")
+ * client.track("button_clicked", mapOf("button" to "submit"))
+ * client.flush()
+ * client.dispose()
+ * ```
+ * 
+ * @param config Configuration for the client
  */
 abstract class RippleClient(
     protected val config: RippleConfig
 ) {
     internal val metadataManager = MetadataManager()
+    
     protected val dispatcher = Dispatcher(
         config = Dispatcher.DispatcherConfig(
             endpoint = config.endpoint,
@@ -25,37 +38,48 @@ abstract class RippleClient(
         loggerAdapter = config.adapters.loggerAdapter
     )
     
-    protected val executor: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor()
+    @Volatile
     protected var isInitialized = false
 
     /**
-     * Initialize the client and restore any persisted events from storage.
-     * Must be called before tracking events.
+     * Initialize the client.
+     * 
+     * Restores any persisted events from storage and starts the automatic
+     * flush scheduler. Must be called before tracking events.
+     * 
+     * This method is idempotent - calling it multiple times has no effect.
+     * Thread-safe and non-blocking.
      */
     open fun init() {
-        executor.execute {
+        if (isInitialized) return
+        
+        synchronized(this) {
+            if (isInitialized) return
+            
             dispatcher.restore()
-            dispatcher.startScheduledFlush(executor)
+            dispatcher.startScheduledFlush()
             isInitialized = true
             config.adapters.loggerAdapter?.info("RippleClient initialized")
         }
     }
 
     /**
-     * Track an event with optional payload and metadata.
+     * Track an event.
      * 
-     * @param name Event name identifier
+     * Events are queued and sent in batches according to the configuration.
+     * This method is non-blocking and returns immediately.
+     * 
+     * @param name Event name identifier (required)
      * @param payload Optional event data as key-value pairs
-     * @param metadata Optional event-specific metadata that merges with shared metadata
+     * @param metadata Optional event-specific metadata that merges with global metadata
+     * @throws IllegalStateException if client is not initialized
      */
     fun track(
         name: String,
         payload: Map<String, Any>? = null,
         metadata: Map<String, Any>? = null
     ) {
-        if (!isInitialized) {
-            throw IllegalStateException("Client must be initialized before tracking events")
-        }
+        checkInitialized()
 
         val event = Event(
             name = name,
@@ -66,13 +90,16 @@ abstract class RippleClient(
             platform = getPlatform()
         )
 
-        executor.execute {
-            dispatcher.enqueue(event)
-        }
+        dispatcher.enqueue(event)
     }
 
     /**
-     * Set shared metadata that will be attached to all subsequent events.
+     * Set global metadata that will be attached to all subsequent events.
+     * 
+     * Metadata set here is merged with event-specific metadata, with
+     * event-specific values taking precedence.
+     * 
+     * Thread-safe and can be called at any time.
      * 
      * @param key Metadata key
      * @param value Metadata value
@@ -82,24 +109,72 @@ abstract class RippleClient(
     }
 
     /**
-     * Immediately flush all queued events to the server.
+     * Remove a global metadata key.
+     * 
+     * @param key Metadata key to remove
      */
-    fun flush() {
-        executor.execute {
-            dispatcher.flush()
-        }
+    fun removeMetadata(key: String) {
+        metadataManager.remove(key)
     }
 
     /**
+     * Clear all global metadata.
+     */
+    fun clearMetadata() {
+        metadataManager.clear()
+    }
+
+    /**
+     * Flush queued events to the server.
+     * 
+     * Non-blocking - submits flush work to background thread and returns
+     * immediately. Safe to call multiple times; concurrent calls are
+     * handled gracefully.
+     * 
+     * Use [flushSync] if you need to wait for completion.
+     */
+    fun flush() {
+        if (!isInitialized) return
+        dispatcher.flush()
+    }
+
+    /**
+     * Flush queued events and wait for completion.
+     * 
+     * Blocking call - waits until all events are sent or failed.
+     * Use this when you need to ensure events are sent before proceeding,
+     * such as before app termination.
+     */
+    fun flushSync() {
+        if (!isInitialized) return
+        dispatcher.flushSync()
+    }
+
+    /**
+     * Get the current number of queued events.
+     * 
+     * @return Number of events waiting to be sent
+     */
+    fun getQueueSize(): Int = dispatcher.getQueueSize()
+
+    /**
      * Clean up resources and stop background operations.
-     * Call when the client is no longer needed.
+     * 
+     * Persists any unsent events to storage for later retry.
+     * After calling dispose, the client cannot be used again.
+     * 
+     * This method is idempotent - calling it multiple times has no effect.
      */
     open fun dispose() {
-        executor.execute {
+        if (!isInitialized) return
+        
+        synchronized(this) {
+            if (!isInitialized) return
+            
             dispatcher.dispose()
+            isInitialized = false
+            config.adapters.loggerAdapter?.info("RippleClient disposed")
         }
-        executor.shutdown()
-        config.adapters.loggerAdapter?.info("RippleClient disposed")
     }
 
     /**
@@ -114,6 +189,12 @@ abstract class RippleClient(
      */
     protected abstract fun getPlatform(): Platform?
 
+    private fun checkInitialized() {
+        if (!isInitialized) {
+            throw IllegalStateException("RippleClient must be initialized before tracking events. Call init() first.")
+        }
+    }
+
     private fun mergeMetadata(eventMetadata: Map<String, Any>?): Map<String, Any>? {
         val globalMetadata = metadataManager.getAll()
         
@@ -121,7 +202,7 @@ abstract class RippleClient(
             globalMetadata.isEmpty() && eventMetadata.isNullOrEmpty() -> null
             globalMetadata.isEmpty() -> eventMetadata
             eventMetadata.isNullOrEmpty() -> globalMetadata
-            else -> globalMetadata + eventMetadata
+            else -> globalMetadata + eventMetadata // Event metadata takes precedence
         }
     }
 }

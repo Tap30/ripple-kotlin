@@ -4,12 +4,33 @@ import android.content.Context
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
+import java.util.UUID
 
 /**
- * Android-specific Ripple client with automatic platform detection and session management.
+ * Android-specific Ripple client implementation.
  * 
- * @param context Android context for platform information
- * @param config Client configuration with adapters
+ * Provides event tracking optimized for Android applications with
+ * automatic session management and platform detection.
+ * 
+ * Example usage:
+ * ```kotlin
+ * val config = RippleConfig(
+ *     apiKey = "your-api-key",
+ *     endpoint = "https://api.example.com/events",
+ *     adapters = AdapterConfig(
+ *         httpAdapter = OkHttpAdapter(),
+ *         storageAdapter = SharedPreferencesAdapter(context),
+ *         loggerAdapter = AndroidLogAdapter()
+ *     )
+ * )
+ * 
+ * val client = AndroidRippleClient(context, config)
+ * client.init()
+ * client.track("app_opened")
+ * ```
+ * 
+ * @param context Android application context
+ * @param config Ripple configuration
  */
 class AndroidRippleClient(
     private val context: Context,
@@ -19,26 +40,28 @@ class AndroidRippleClient(
     private val sessionManager = SessionManager()
     private val platformDetector = PlatformDetector()
 
-    /**
-     * Initialize client and start session tracking.
-     * Automatically detects Android device and OS information.
-     */
-    override fun init() {
-        sessionManager.initSession()
-        super.init()
-    }
-
-    /**
-     * Get current session ID for event tracking.
-     * 
-     * @return Session ID string or null if not initialized
-     */
     override fun getSessionId(): String? = sessionManager.getSessionId()
 
-    /**
-     * Get Android platform information including device and OS details.
-     * 
-     * @return Platform object with Android-specific information
-     */
-    override fun getPlatform(): Platform = platformDetector.getPlatform()
+    override fun getPlatform(): Platform? = platformDetector.getPlatform()
+}
+
+/**
+ * Manages session IDs for event tracking.
+ */
+internal class SessionManager {
+    private val sessionId: String = UUID.randomUUID().toString()
+    
+    fun getSessionId(): String = sessionId
+}
+
+/**
+ * Detects platform information for event context.
+ */
+internal class PlatformDetector {
+    fun getPlatform(): Platform = Platform(
+        os = "Android",
+        osVersion = android.os.Build.VERSION.RELEASE,
+        device = android.os.Build.MODEL,
+        manufacturer = android.os.Build.MANUFACTURER
+    )
 }

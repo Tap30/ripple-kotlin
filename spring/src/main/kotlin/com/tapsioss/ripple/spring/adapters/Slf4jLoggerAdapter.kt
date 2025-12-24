@@ -8,9 +8,9 @@ import org.slf4j.LoggerFactory
 /**
  * SLF4J-based logger adapter for Spring
  */
-class Slf4jLoggerAdapter(
-    private val logger: Logger = LoggerFactory.getLogger("Ripple"),
-    private val logLevel: LogLevel = LogLevel.WARN
+class Slf4jLoggerAdapter @JvmOverloads constructor(
+    private val logLevel: LogLevel = LogLevel.WARN,
+    private val logger: Logger = LoggerFactory.getLogger("Ripple")
 ) : LoggerAdapter {
     
     override fun debug(message: String, vararg args: Any?) {

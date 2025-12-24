@@ -41,31 +41,12 @@ data class Event(
 /**
  * Platform information
  */
-sealed class Platform {
-    data class Android(
-        val device: DeviceInfo,
-        val os: OsInfo
-    ) : Platform()
-    
-    data class Server(
-        val runtime: String = "JVM"
-    ) : Platform()
-}
-
-/**
- * Device information
- */
-data class DeviceInfo(
-    val name: String,
-    val version: String
-)
-
-/**
- * OS information
- */
-data class OsInfo(
-    val name: String,
-    val version: String
+@kotlinx.serialization.Serializable
+data class Platform(
+    val os: String?,
+    val osVersion: String?,
+    val device: String?,
+    val manufacturer: String?
 )
 
 /**

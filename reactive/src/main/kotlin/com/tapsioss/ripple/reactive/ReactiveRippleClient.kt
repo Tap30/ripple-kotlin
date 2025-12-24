@@ -56,7 +56,12 @@ class ReactiveRippleClient(
 
     override fun getSessionId(): String = sessionId
 
-    override fun getPlatform(): Platform.Server {
-        return Platform.Server(runtime = "Reactive")
+    override fun getPlatform(): Platform {
+        return Platform(
+            os = System.getProperty("os.name"),
+            osVersion = System.getProperty("os.version"),
+            device = null,
+            manufacturer = null
+        )
     }
 }

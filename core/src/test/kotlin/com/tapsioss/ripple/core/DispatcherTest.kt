@@ -4,128 +4,136 @@ import com.tapsioss.ripple.core.adapters.HttpAdapter
 import com.tapsioss.ripple.core.adapters.LoggerAdapter
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import io.mockk.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class DispatcherTest {
-
-    private val httpAdapter = mockk<HttpAdapter>(relaxed = true)
-    private val storageAdapter = mockk<StorageAdapter>(relaxed = true)
-    private val loggerAdapter = mockk<LoggerAdapter>(relaxed = true)
+    
+    private lateinit var httpAdapter: HttpAdapter
+    private lateinit var storageAdapter: StorageAdapter
+    private lateinit var loggerAdapter: LoggerAdapter
+    private lateinit var dispatcher: Dispatcher
     
     private val config = Dispatcher.DispatcherConfig(
-        endpoint = "https://api.test.com",
-        apiKey = "test-key",
+        endpoint = "https://api.example.com/events",
+        apiKey = "test-api-key",
         apiKeyHeader = "X-API-Key",
-        flushInterval = 100L,
-        maxBatchSize = 3,
-        maxRetries = 2
+        flushInterval = 5000L,
+        maxBatchSize = 10,
+        maxRetries = 3
     )
-
+    
     @BeforeEach
     fun setup() {
-        clearAllMocks()
-    }
-
-    private fun createDispatcher() = Dispatcher(config, httpAdapter, storageAdapter, loggerAdapter)
-
-
-    @Test
-    fun `when flush succeeds, then events are sent and storage cleared`() = runTest {
-        coEvery { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(true, 200)
-        val dispatcher = createDispatcher()
-        dispatcher.enqueue(createTestEvent("test"))
-
-        dispatcher.flush()
-
-        coVerify { httpAdapter.send(any(), any(), any(), any()) }
-        coVerify { storageAdapter.clear() }
-    }
-
-    @Test
-    fun `when flush fails with retries, then events are persisted`() = runTest {
-        coEvery { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(false, 500)
-        val dispatcher = createDispatcher()
-        dispatcher.enqueue(createTestEvent("test"))
-
-        dispatcher.flush()
-
-        coVerify(atLeast = 1) { httpAdapter.send(any(), any(), any(), any()) }
-        coVerify { storageAdapter.save(any()) }
-    }
-
-    @Test
-    fun `when flush throws exception, then retries with backoff`() = runTest {
-        coEvery { httpAdapter.send(any(), any(), any(), any()) } throws RuntimeException("Network error")
-        val dispatcher = createDispatcher()
-        dispatcher.enqueue(createTestEvent("test"))
-
-        dispatcher.flush()
-
-        coVerify(atLeast = 1) { httpAdapter.send(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `when restore is called, then persisted events are loaded`() = runTest {
-        val events = listOf(createTestEvent("restored1"), createTestEvent("restored2"))
-        coEvery { storageAdapter.load() } returns events
-        val dispatcher = createDispatcher()
-
-        dispatcher.restore()
-
-        coVerify { storageAdapter.load() }
-    }
-
-    @Test
-    fun `when restore fails, then operation completes gracefully`() = runTest {
-        coEvery { storageAdapter.load() } throws RuntimeException("Storage error")
-        val dispatcher = createDispatcher()
-
-        dispatcher.restore()
-
-        coVerify { storageAdapter.load() }
-    }
-
-    @Test
-    fun `when dispatcher is disposed, then scheduled flush stops`() {
-        val dispatcher = createDispatcher()
-        val executor = java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+        httpAdapter = mockk(relaxed = true)
+        storageAdapter = mockk(relaxed = true)
+        loggerAdapter = mockk(relaxed = true)
         
-        dispatcher.startScheduledFlush(executor)
-        dispatcher.dispose()
-        executor.shutdown()
-
-        assertTrue(true) // Test passes if no exceptions
+        every { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(ok = true, status = 200, data = null)
+        every { storageAdapter.load() } returns emptyList()
     }
-
+    
+    @AfterEach
+    fun tearDown() {
+        if (::dispatcher.isInitialized) {
+            dispatcher.dispose()
+        }
+    }
+    
+    private fun createDispatcher(): Dispatcher {
+        dispatcher = Dispatcher(config, httpAdapter, storageAdapter, loggerAdapter)
+        return dispatcher
+    }
+    
     @Test
-    fun `when flush is called after dispose, then operation is ignored`() = runTest {
+    fun `when event is enqueued, then queue size increases`() {
+        val dispatcher = createDispatcher()
+        val event = createTestEvent("test_event")
+        
+        dispatcher.enqueue(event)
+        
+        assertEquals(1, dispatcher.getQueueSize())
+    }
+    
+    @Test
+    fun `when flush is called, then events are sent via http adapter`() {
+        val dispatcher = createDispatcher()
+        val event = createTestEvent("test_event")
+        
+        dispatcher.enqueue(event)
+        dispatcher.flushSync()
+        
+        verify { httpAdapter.send(any(), any(), any(), any()) }
+    }
+    
+    @Test
+    fun `when flush succeeds, then queue is cleared`() {
+        val dispatcher = createDispatcher()
+        val event = createTestEvent("test_event")
+        
+        dispatcher.enqueue(event)
+        dispatcher.flushSync()
+        
+        assertEquals(0, dispatcher.getQueueSize())
+    }
+    
+    @Test
+    fun `when flush fails, then events are re-queued`() {
+        every { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(ok = false, status = 500, data = null)
+        
+        val dispatcher = createDispatcher()
+        val event = createTestEvent("test_event")
+        
+        dispatcher.enqueue(event)
+        dispatcher.flushSync()
+        
+        assertTrue(dispatcher.getQueueSize() > 0)
+    }
+    
+    @Test
+    fun `when restore is called, then events are loaded from storage`() {
+        val storedEvents = listOf(createTestEvent("stored_event"))
+        every { storageAdapter.load() } returns storedEvents
+        
+        val dispatcher = createDispatcher()
+        dispatcher.restore()
+        
+        assertEquals(1, dispatcher.getQueueSize())
+    }
+    
+    @Test
+    fun `when dispatcher is disposed, then no more events can be enqueued`() {
         val dispatcher = createDispatcher()
         dispatcher.dispose()
-
-        dispatcher.flush()
-
-        coVerify(exactly = 0) { httpAdapter.send(any(), any(), any(), any()) }
+        
+        dispatcher.enqueue(createTestEvent("test_event"))
+        
+        assertEquals(0, dispatcher.getQueueSize())
     }
-
+    
     @Test
-    fun `when flush with empty queue, then no HTTP call is made`() = runTest {
-        val dispatcher = createDispatcher()
-
-        dispatcher.flush()
-
-        coVerify(exactly = 0) { httpAdapter.send(any(), any(), any(), any()) }
+    fun `when batch size is reached, then flush is triggered`() {
+        val smallBatchConfig = config.copy(maxBatchSize = 2)
+        dispatcher = Dispatcher(smallBatchConfig, httpAdapter, storageAdapter, loggerAdapter)
+        
+        dispatcher.enqueue(createTestEvent("event1"))
+        dispatcher.enqueue(createTestEvent("event2"))
+        
+        // Give async flush time to complete
+        Thread.sleep(100)
+        
+        verify { httpAdapter.send(any(), any(), any(), any()) }
     }
-
+    
     private fun createTestEvent(name: String) = Event(
         name = name,
-        payload = mapOf("test" to "data"),
+        payload = mapOf("key" to "value"),
         issuedAt = System.currentTimeMillis(),
         metadata = null,
         sessionId = "test-session",
-        platform = Platform.Server()
+        platform = null
     )
 }

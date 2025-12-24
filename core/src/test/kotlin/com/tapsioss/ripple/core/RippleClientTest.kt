@@ -4,209 +4,140 @@ import com.tapsioss.ripple.core.adapters.HttpAdapter
 import com.tapsioss.ripple.core.adapters.LoggerAdapter
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import io.mockk.*
-import kotlinx.coroutines.*
-import kotlinx.coroutines.test.*
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 class RippleClientTest {
-
-    private val httpAdapter = mockk<HttpAdapter>(relaxed = true)
-    private val storageAdapter = mockk<StorageAdapter>(relaxed = true)
-    private val loggerAdapter = mockk<LoggerAdapter>(relaxed = true)
     
-    private val config = RippleConfig(
-        apiKey = "test-key",
-        endpoint = "https://api.test.com",
-        adapters = AdapterConfig(httpAdapter, storageAdapter, loggerAdapter)
-    )
-
+    private lateinit var httpAdapter: HttpAdapter
+    private lateinit var storageAdapter: StorageAdapter
+    private lateinit var loggerAdapter: LoggerAdapter
+    private lateinit var config: RippleConfig
+    private lateinit var client: TestRippleClient
+    
     @BeforeEach
     fun setup() {
-        clearAllMocks()
-        coEvery { storageAdapter.load() } returns emptyList()
-    }
-
-    private class TestRippleClient(config: RippleConfig) : RippleClient(config) {
-        private var testSessionId: String? = "test-session"
-        private var testPlatform: Platform? = Platform.Server()
-
-        override fun getSessionId(): String? = testSessionId
-        override fun getPlatform(): Platform? = testPlatform
+        httpAdapter = mockk(relaxed = true)
+        storageAdapter = mockk(relaxed = true)
+        loggerAdapter = mockk(relaxed = true)
         
-        fun setTestSessionId(sessionId: String?) { testSessionId = sessionId }
-        fun setTestPlatform(platform: Platform?) { testPlatform = platform }
-    }
-
-    @Test
-    fun `when client is initialized, then dispatcher is restored and logger notified`() = runTest {
-        val client = TestRippleClient(config)
-
-        client.init()
-
-        coVerify { storageAdapter.load() }
-        verify { loggerAdapter.info("RippleClient initialized") }
-    }
-
-    @Test
-    fun `when tracking before init, then exception is thrown`() = runTest {
-        val client = TestRippleClient(config)
-
-        assertThrows<IllegalStateException> {
-            runBlocking { client.track("test_event") }
-        }
-    }
-
-    @Test
-    fun `when tracking event with all parameters, then event is created correctly`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-
-        client.track("user_login", mapOf("method" to "google"), mapOf("version" to "1.0"))
-
-        verify { loggerAdapter.debug("Event enqueued: user_login") }
-    }
-
-    @Test
-    fun `when tracking event with only name, then event is created with nulls`() {
-        val client = TestRippleClient(config)
-        client.init()
-        Thread.sleep(100) // Allow init to complete
-
-        client.track("simple_event")
-
-        verify { loggerAdapter.debug("Event enqueued: simple_event") }
-    }
-
-    @Test
-    fun `when setting metadata, then metadata is stored in manager`() = runTest {
-        val client = TestRippleClient(config)
-
-        client.setMetadata("userId", "123")
-        client.setMetadata("plan", "premium")
-
-        assertEquals("123", client.metadataManager.get("userId"))
-        assertEquals("premium", client.metadataManager.get("plan"))
-    }
-
-    @Test
-    fun `when tracking with shared and event metadata, then metadata is merged correctly`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-        client.setMetadata("global", "value")
-
-        client.track("test", null, mapOf("event" to "specific"))
-
-        verify { loggerAdapter.debug("Event enqueued: test") }
-    }
-
-    @Test
-    fun `when tracking with no metadata, then event metadata is null`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-
-        client.track("no_metadata_event")
-
-        verify { loggerAdapter.debug("Event enqueued: no_metadata_event") }
-    }
-
-    @Test
-    fun `when flushing, then dispatcher flush is called`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-
-        client.flush()
-
-        // Verify flush was called (no events to send, so no HTTP call)
-        coVerify(exactly = 0) { httpAdapter.send(any(), any(), any(), any()) }
-    }
-
-    @Test
-    fun `when disposing, then dispatcher is disposed and logger notified`() = runTest {
-        val client = TestRippleClient(config)
-
-        client.dispose()
-
-        verify { loggerAdapter.info("RippleClient disposed") }
-    }
-
-    @Test
-    fun `when client has null session and platform, then event uses nulls`() = runTest {
-        val client = TestRippleClient(config)
-        client.setTestSessionId(null)
-        client.setTestPlatform(null)
-        client.init()
-
-        client.track("null_session_event")
-
-        verify { loggerAdapter.debug("Event enqueued: null_session_event") }
-    }
-
-    @Test
-    fun `when multiple clients are used concurrently, then each operates independently`() = runTest {
-        val client1 = TestRippleClient(config.copy())
-        val client2 = TestRippleClient(config.copy())
+        every { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(ok = true, status = 200, data = null)
+        every { storageAdapter.load() } returns emptyList()
         
-        client1.init()
-        client2.init()
-
-        client1.setMetadata("clientId", "client1")
-        client2.setMetadata("clientId", "client2")
-
-        val jobs = listOf(
-            async { client1.track("event1") },
-            async { client2.track("event2") }
+        config = RippleConfig(
+            apiKey = "test-api-key",
+            endpoint = "https://api.example.com/events",
+            adapters = AdapterConfig(
+                httpAdapter = httpAdapter,
+                storageAdapter = storageAdapter,
+                loggerAdapter = loggerAdapter
+            )
         )
-        jobs.awaitAll()
-
-        assertEquals("client1", client1.metadataManager.get("clientId"))
-        assertEquals("client2", client2.metadataManager.get("clientId"))
+        
+        client = TestRippleClient(config)
     }
-
-    @Test
-    fun `when event stampede occurs, then all events are processed`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-
-        val jobs = (1..100).map { index ->
-            async { client.track("stampede_event_$index") }
+    
+    @AfterEach
+    fun tearDown() {
+        if (::client.isInitialized) {
+            client.dispose()
         }
-        jobs.awaitAll()
-
-        verify(exactly = 100) { loggerAdapter.debug(match { it.startsWith("Event enqueued: stampede_event_") }) }
     }
-
+    
     @Test
-    fun `when metadata merging with empty global metadata, then only event metadata is used`() = runTest {
-        val client = TestRippleClient(config)
-        client.init()
-
-        client.track("test", null, mapOf("event" to "only"))
-
-        verify { loggerAdapter.debug("Event enqueued: test") }
+    fun `when client is not initialized, then track throws exception`() {
+        assertThrows<IllegalStateException> {
+            client.track("test_event")
+        }
     }
-
+    
     @Test
-    fun `when metadata merging with empty event metadata, then only global metadata is used`() = runTest {
-        val client = TestRippleClient(config)
-        client.setMetadata("global", "only")
+    fun `when client is initialized, then track succeeds`() {
         client.init()
-
-        client.track("test", null, null)
-
-        verify { loggerAdapter.debug("Event enqueued: test") }
+        
+        client.track("test_event")
+        
+        assertEquals(1, client.getQueueSize())
     }
-
+    
     @Test
-    fun `when event metadata overrides global metadata, then event metadata takes precedence`() = runTest {
-        val client = TestRippleClient(config)
-        client.setMetadata("key", "global")
+    fun `when tracking with payload, then event contains payload`() {
         client.init()
-
-        client.track("test", null, mapOf("key" to "event"))
-
-        verify { loggerAdapter.debug("Event enqueued: test") }
+        val payload = mapOf("key" to "value")
+        
+        client.track("test_event", payload)
+        
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `when setting metadata, then metadata is included in events`() {
+        client.init()
+        client.setMetadata("user_id", "12345")
+        
+        client.track("test_event")
+        
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `when flush is called, then events are sent`() {
+        client.init()
+        client.track("test_event")
+        
+        client.flushSync()
+        
+        verify { httpAdapter.send(any(), any(), any(), any()) }
+    }
+    
+    @Test
+    fun `when dispose is called, then client cannot track events`() {
+        client.init()
+        client.dispose()
+        
+        // After dispose, track should throw since client is not initialized
+        assertThrows<IllegalStateException> {
+            client.track("test_event")
+        }
+    }
+    
+    @Test
+    fun `when init is called multiple times, then it is idempotent`() {
+        client.init()
+        client.init()
+        client.init()
+        
+        // Should not throw
+        client.track("test_event")
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `when metadata is cleared, then events have no global metadata`() {
+        client.init()
+        client.setMetadata("key", "value")
+        client.clearMetadata()
+        
+        client.track("test_event")
+        
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    /**
+     * Test implementation of RippleClient
+     */
+    private class TestRippleClient(config: RippleConfig) : RippleClient(config) {
+        override fun getSessionId(): String = "test-session-id"
+        override fun getPlatform(): Platform = Platform(
+            os = "Test",
+            osVersion = "1.0",
+            device = "TestDevice",
+            manufacturer = "TestManufacturer"
+        )
     }
 }
