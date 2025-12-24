@@ -5,8 +5,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.tapsioss.ripple.android.AndroidRippleClient
 import com.tapsioss.ripple.android.adapters.AndroidLogAdapter
 import com.tapsioss.ripple.android.adapters.SharedPreferencesAdapter
-import com.tapsioss.ripple.android.okhttp.OkHttpAdapter
-import com.tapsioss.ripple.android.room.RoomStorageAdapterFactory
+import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
+import com.tapsioss.ripple.android.adapters.room.RoomStorageAdapterFactory
 import com.tapsioss.ripple.core.AdapterConfig
 import com.tapsioss.ripple.core.RippleConfig
 import com.tapsioss.ripple.core.adapters.LogLevel

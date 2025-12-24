@@ -10,15 +10,17 @@ rootProject.name = "ripple-kotlin"
 
 include(
     ":core",
-    ":android",
-    ":spring",
-    ":reactive",
     
-    // Adapter modules
-    ":ripple-android-okhttp",
-    ":ripple-android-room",
-    ":ripple-spring-webflux",
-    ":ripple-reactive-reactor",
+    // Platform core modules
+    ":android:core",
+    ":spring:core", 
+    ":reactive:core",
+    
+    // Platform adapter modules
+    ":android:adapters:okhttp",
+    ":android:adapters:room",
+    ":spring:adapters:webflux",
+    ":reactive:adapters:reactor",
     
     // Sample modules
     ":samples:android-sample",

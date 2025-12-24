@@ -25,9 +25,9 @@ A high-performance event tracking SDK for Kotlin and Java applications.
 implementation("com.tapsioss.ripple:core:1.0.0")
 
 // Platform modules (lightweight, no adapters included)
-implementation("com.tapsioss.ripple:android:1.0.0")
-implementation("com.tapsioss.ripple:spring:1.0.0")
-implementation("com.tapsioss.ripple:reactive:1.0.0")
+implementation("com.tapsioss.ripple:android-core:1.0.0")
+implementation("com.tapsioss.ripple:spring-core:1.0.0")
+implementation("com.tapsioss.ripple:reactive-core:1.0.0")
 ```
 
 ### Adapter Modules (Optional)
@@ -36,14 +36,14 @@ Choose only the adapters you need:
 
 ```kotlin
 // Android adapters
-implementation("com.tapsioss.ripple:ripple-android-okhttp:1.0.0")    // HTTP with OkHttp
-implementation("com.tapsioss.ripple:ripple-android-room:1.0.0")      // Storage with Room
+implementation("com.tapsioss.ripple:android-adapters-okhttp:1.0.0")    // HTTP with OkHttp
+implementation("com.tapsioss.ripple:android-adapters-room:1.0.0")      // Storage with Room
 
 // Spring adapters  
-implementation("com.tapsioss.ripple:ripple-spring-webflux:1.0.0")    // HTTP with WebClient
+implementation("com.tapsioss.ripple:spring-adapters-webflux:1.0.0")    // HTTP with WebClient
 
 // Reactive adapters
-implementation("com.tapsioss.ripple:ripple-reactive-reactor:1.0.0")   // Project Reactor support
+implementation("com.tapsioss.ripple:reactive-adapters-reactor:1.0.0")   // Project Reactor support
 ```
 
 ## Quick Start
@@ -52,13 +52,13 @@ implementation("com.tapsioss.ripple:ripple-reactive-reactor:1.0.0")   // Project
 
 ```kotlin
 // Add dependencies
-implementation("com.tapsioss.ripple:android:1.0.0")
-implementation("com.tapsioss.ripple:ripple-android-okhttp:1.0.0")
-implementation("com.tapsioss.ripple:ripple-android-room:1.0.0")
+implementation("com.tapsioss.ripple:android-core:1.0.0")
+implementation("com.tapsioss.ripple:android-adapters-okhttp:1.0.0")
+implementation("com.tapsioss.ripple:android-adapters-room:1.0.0")
 
 // Usage
-import com.tapsioss.ripple.android.okhttp.OkHttpAdapter
-import com.tapsioss.ripple.android.room.RoomStorageAdapterFactory
+import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
+import com.tapsioss.ripple.android.adapters.room.RoomStorageAdapterFactory
 
 val config = RippleConfig(
     apiKey = "your-api-key",
