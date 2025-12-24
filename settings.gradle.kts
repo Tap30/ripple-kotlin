@@ -14,5 +14,6 @@ include(
     ":spring",
     ":reactive",
     ":samples:android-sample",
-    ":samples:spring-sample"
+    ":samples:spring-sample",
+    ":samples:spring-java-sample",
 )
