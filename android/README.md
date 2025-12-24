@@ -2,6 +2,17 @@
 
 Pure Kotlin JVM library for Android integration with Ripple SDK.
 
+## Installation
+
+```kotlin
+// Core Android module (lightweight)
+implementation("com.tapsioss.ripple:android:1.0.0")
+
+// Optional adapters (choose what you need)
+implementation("com.tapsioss.ripple:ripple-android-okhttp:1.0.0")    // HTTP with OkHttp
+implementation("com.tapsioss.ripple:ripple-android-room:1.0.0")      // Storage with Room
+```
+
 ## Public API
 
 ### AndroidRippleClient
@@ -14,50 +25,58 @@ class AndroidRippleClient(context: Context, config: RippleConfig) : RippleClient
 
 ### Built-in Adapters
 ```kotlin
-// HTTP
-class OkHttpAdapter(client: OkHttpClient = OkHttpClient()) : HttpAdapter
-
-// Storage  
+// Storage (included in core android module)
 class SharedPreferencesAdapter(context: Context, prefsName: String = "ripple_events") : StorageAdapter
 
-// Logging
+// Logging (included in core android module)
 class AndroidLogAdapter(tag: String = "Ripple", logLevel: LogLevel = LogLevel.WARN) : LoggerAdapter
 ```
 
-## Usage
-Add to your Android app's `build.gradle.kts`:
-```kotlin
-implementation("com.tapsioss.ripple:android:1.0.0")
-```
+### Optional Adapters (Separate Modules)
 
+#### HTTP Adapters
+- **OkHttpAdapter** (`ripple-android-okhttp`) - High-performance HTTP with OkHttp
+
+#### Storage Adapters  
+- **RoomStorageAdapter** (`ripple-android-room`) - SQLite database with Room ORM
+
+## Usage Examples
+
+### Basic Setup (SharedPreferences)
 ```kotlin
 val config = RippleConfig(
     apiKey = "your-api-key",
     endpoint = "https://api.example.com/events",
     adapters = AdapterConfig(
-        httpAdapter = OkHttpAdapter(),
-        storageAdapter = SharedPreferencesAdapter(context),
+        httpAdapter = OkHttpAdapter(), // Requires ripple-android-okhttp
+        storageAdapter = SharedPreferencesAdapter(context), // Built-in
+        loggerAdapter = AndroidLogAdapter() // Built-in
+    )
+)
+```
+
+### High-Performance Setup (Room Database)
+```kotlin
+val config = RippleConfig(
+    apiKey = "your-api-key", 
+    endpoint = "https://api.example.com/events",
+    adapters = AdapterConfig(
+        httpAdapter = OkHttpAdapter(), // Requires ripple-android-okhttp
+        storageAdapter = RoomStorageAdapterFactory.create(context), // Requires ripple-android-room
         loggerAdapter = AndroidLogAdapter()
     )
 )
-
-val client = AndroidRippleClient(context, config)
-lifecycleScope.launch {
-    client.init()
-    client.track("user_login", mapOf("method" to "google"))
-}
 ```
 
 ## Features
 - Pure Kotlin JVM library (no Android AGP required)
-- SharedPreferences-based event persistence
+- SharedPreferences-based event persistence (built-in)
 - Android platform detection (device, OS info)
-- OkHttp integration for reliable networking
 - Lightweight with minimal dependencies
+- Optional high-performance adapters
 
-## Benefits of Pure Kotlin Approach
-- No Android Gradle Plugin dependency
-- Faster compilation
-- Can be used in any Kotlin/Java project
-- Smaller artifact size
-- No Android manifest required
+## Benefits of Modular Approach
+- **Smaller app size** - only include adapters you need
+- **No forced dependencies** - OkHttp and Room are optional
+- **Faster compilation** - fewer transitive dependencies
+- **Flexible architecture** - mix and match adapters

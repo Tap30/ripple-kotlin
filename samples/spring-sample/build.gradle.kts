@@ -7,7 +7,8 @@ plugins {
 
 dependencies {
     implementation(project(":spring"))
-    implementation(libs.spring.boot.starter.webflux)
+    implementation(project(":ripple-spring-webflux"))
+    implementation(libs.spring.boot.starter.web)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

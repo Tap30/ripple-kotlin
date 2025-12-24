@@ -19,11 +19,12 @@ tasks.jar {
 
 dependencies {
     api(project(":core"))
-    implementation(libs.spring.boot.starter.webflux)
-    implementation(libs.spring.boot.starter.data.jpa)
-    implementation(libs.jackson.module.kotlin)
-    implementation(libs.slf4j.api)
-    implementation(libs.kotlinx.coroutines.reactive)
+    implementation(libs.kotlinx.coroutines.core)
+    
+    // Spring Boot dependencies (compileOnly to avoid forcing on consumers)
+    compileOnly(libs.spring.boot.starter.webflux)
+    compileOnly(libs.jackson.module.kotlin)
+    compileOnly(libs.slf4j.api)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

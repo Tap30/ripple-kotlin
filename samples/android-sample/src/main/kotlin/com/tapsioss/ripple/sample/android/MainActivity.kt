@@ -2,15 +2,14 @@ package com.tapsioss.ripple.sample.android
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.tapsioss.ripple.android.AndroidRippleClient
 import com.tapsioss.ripple.android.adapters.AndroidLogAdapter
-import com.tapsioss.ripple.android.adapters.OkHttpAdapter
 import com.tapsioss.ripple.android.adapters.SharedPreferencesAdapter
+import com.tapsioss.ripple.android.okhttp.OkHttpAdapter
+import com.tapsioss.ripple.android.room.RoomStorageAdapterFactory
 import com.tapsioss.ripple.core.AdapterConfig
 import com.tapsioss.ripple.core.RippleConfig
 import com.tapsioss.ripple.core.adapters.LogLevel
-import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
@@ -19,13 +18,13 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize Ripple client
+        // Initialize Ripple client with modular adapters
         val config = RippleConfig(
             apiKey = "your-api-key",
             endpoint = "https://api.example.com/events",
             adapters = AdapterConfig(
-                httpAdapter = OkHttpAdapter(),
-                storageAdapter = SharedPreferencesAdapter(this),
+                httpAdapter = OkHttpAdapter(), // From ripple-android-okhttp module
+                storageAdapter = RoomStorageAdapterFactory.create(this), // From ripple-android-room module
                 loggerAdapter = AndroidLogAdapter(logLevel = LogLevel.DEBUG)
             )
         )

@@ -6,9 +6,9 @@ plugins {
 
 dependencies {
     api(project(":core"))
-    
-    // Use provided scope for Android dependencies
-    compileOnly("com.google.android:android:4.1.1.4")
+    api(project(":reactive"))
+    implementation(libs.reactor.core)
+    implementation(libs.kotlinx.coroutines.reactive)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

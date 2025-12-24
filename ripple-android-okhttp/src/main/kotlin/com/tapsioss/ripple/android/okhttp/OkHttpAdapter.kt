@@ -1,4 +1,4 @@
-package com.tapsioss.ripple.android.adapters
+package com.tapsioss.ripple.android.okhttp
 
 import com.tapsioss.ripple.core.Event
 import com.tapsioss.ripple.core.HttpResponse

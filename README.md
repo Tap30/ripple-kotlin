@@ -18,31 +18,32 @@ A high-performance event tracking SDK for Kotlin and Java applications.
 
 ## Download
 
-### GitHub Packages
-
-Add to your `build.gradle.kts`:
+### Core Modules
 
 ```kotlin
-repositories {
-    maven {
-        url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
-        credentials {
-            username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_USERNAME")
-            password = project.findProperty("gpr.token") as String? ?: System.getenv("GITHUB_TOKEN")
-        }
-    }
-}
+// Core functionality
+implementation("com.tapsioss.ripple:core:1.0.0")
 
-dependencies {
-    // Android
-    implementation("com.tapsioss.ripple:android:1.0.0")
-    
-    // Spring Boot
-    implementation("com.tapsioss.ripple:spring:1.0.0")
-    
-    // Core (for custom implementations)
-    implementation("com.tapsioss.ripple:core:1.0.0")
-}
+// Platform modules (lightweight, no adapters included)
+implementation("com.tapsioss.ripple:android:1.0.0")
+implementation("com.tapsioss.ripple:spring:1.0.0")
+implementation("com.tapsioss.ripple:reactive:1.0.0")
+```
+
+### Adapter Modules (Optional)
+
+Choose only the adapters you need:
+
+```kotlin
+// Android adapters
+implementation("com.tapsioss.ripple:ripple-android-okhttp:1.0.0")    // HTTP with OkHttp
+implementation("com.tapsioss.ripple:ripple-android-room:1.0.0")      // Storage with Room
+
+// Spring adapters  
+implementation("com.tapsioss.ripple:ripple-spring-webflux:1.0.0")    // HTTP with WebClient
+
+// Reactive adapters
+implementation("com.tapsioss.ripple:ripple-reactive-reactor:1.0.0")   // Project Reactor support
 ```
 
 ## Quick Start
@@ -50,12 +51,21 @@ dependencies {
 ### Android (Kotlin)
 
 ```kotlin
+// Add dependencies
+implementation("com.tapsioss.ripple:android:1.0.0")
+implementation("com.tapsioss.ripple:ripple-android-okhttp:1.0.0")
+implementation("com.tapsioss.ripple:ripple-android-room:1.0.0")
+
+// Usage
+import com.tapsioss.ripple.android.okhttp.OkHttpAdapter
+import com.tapsioss.ripple.android.room.RoomStorageAdapterFactory
+
 val config = RippleConfig(
     apiKey = "your-api-key",
     endpoint = "https://api.example.com/events",
     adapters = AdapterConfig(
         httpAdapter = OkHttpAdapter(),
-        storageAdapter = SharedPreferencesAdapter(context),
+        storageAdapter = RoomStorageAdapterFactory.create(context),
         loggerAdapter = AndroidLogAdapter(LogLevel.INFO)
     )
 )

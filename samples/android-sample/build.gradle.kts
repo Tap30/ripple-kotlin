@@ -27,7 +27,8 @@ android {
 
 dependencies {
     implementation(project(":android"))
+    implementation(project(":ripple-android-okhttp"))
+    implementation(project(":ripple-android-room"))
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.okhttp)
 }

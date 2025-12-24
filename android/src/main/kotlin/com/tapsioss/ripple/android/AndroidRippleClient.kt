@@ -4,7 +4,7 @@ import android.content.Context
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
-import java.util.UUID
+import java.util.*
 
 /**
  * Android-specific Ripple client implementation.
