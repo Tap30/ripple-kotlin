@@ -41,7 +41,7 @@ jobs:
         build-scan-terms-of-use-agree: "yes"
 
     - name: Run tests
-      run: gradle test --no-daemon
+      run: ./gradlew test --no-daemon
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
