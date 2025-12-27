@@ -5,9 +5,10 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":core"))
-    implementation(libs.okhttp)
+    api(project(":core"))
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

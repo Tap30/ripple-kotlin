@@ -3,8 +3,8 @@ package com.tapsioss.ripple.sample.android
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.tapsioss.ripple.android.AndroidRippleClient
-import com.tapsioss.ripple.android.adapters.AndroidLogAdapter
-import com.tapsioss.ripple.android.adapters.SharedPreferencesAdapter
+import com.tapsioss.ripple.android.adapters.logging.AndroidLogAdapter
+import com.tapsioss.ripple.android.adapters.storage.SharedPreferencesAdapter
 import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
 import com.tapsioss.ripple.android.adapters.room.RoomStorageAdapterFactory
 import com.tapsioss.ripple.core.AdapterConfig

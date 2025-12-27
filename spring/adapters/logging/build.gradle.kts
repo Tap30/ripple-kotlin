@@ -5,9 +5,8 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":core"))
-    implementation(libs.okhttp)
-    implementation(libs.kotlinx.serialization.json)
+    api(project(":core"))
+    implementation("org.slf4j:slf4j-api:2.0.9")
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

@@ -5,7 +5,7 @@ plugins {
 }
 
 dependencies {
-    api(project(":core"))
+    api(project(":reactive:reactive-core"))
     implementation(libs.reactor.core)
     implementation(libs.kotlinx.coroutines.reactive)
     

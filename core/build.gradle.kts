@@ -5,8 +5,8 @@ plugins {
 }
 
 dependencies {
-    api(libs.kotlinx.coroutines.core)
-    api(libs.kotlinx.serialization.json)
+    implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.kotlinx.serialization.json)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

@@ -6,8 +6,10 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":spring:core"))
+    implementation(project(":spring:spring-core"))
     implementation(project(":spring:adapters:webflux"))
+    implementation(project(":spring:adapters:logging"))
+    implementation(project(":spring:adapters:storage-file"))
     implementation(libs.spring.boot.starter.web)
     
     testImplementation(libs.junit.jupiter)

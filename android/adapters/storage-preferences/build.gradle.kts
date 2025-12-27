@@ -6,8 +6,10 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
-    implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    
+    // Use provided scope for Android dependencies
+    compileOnly("com.google.android:android:4.1.1.4")
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

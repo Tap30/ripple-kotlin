@@ -12,14 +12,18 @@ include(
     ":core",
     
     // Platform core modules
-    ":android:core",
-    ":spring:core", 
-    ":reactive:core",
+    ":android:android-core",
+    ":spring:spring-core", 
+    ":reactive:reactive-core",
     
     // Platform adapter modules
     ":android:adapters:okhttp",
     ":android:adapters:room",
+    ":android:adapters:logging",
+    ":android:adapters:storage-preferences",
     ":spring:adapters:webflux",
+    ":spring:adapters:logging",
+    ":spring:adapters:storage-file",
     ":reactive:adapters:reactor",
     
     // Sample modules
