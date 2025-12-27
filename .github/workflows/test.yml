@@ -12,8 +12,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: "Build and Test"
+  test:
+    name: "Test"
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -39,10 +39,7 @@ jobs:
         build-scan-publish: true
         build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
         build-scan-terms-of-use-agree: "yes"
-    
-    - name: Build
-      run: gradle build --no-daemon
-    
+
     - name: Run tests
       run: gradle test --no-daemon
     
