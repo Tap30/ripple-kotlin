@@ -56,7 +56,7 @@ class OkHttpAdapter(
             HttpResponse(
                 ok = response.isSuccessful,
                 status = response.code,
-                data = response.body?.string()
+                data = response.body.string()
             )
         } catch (e: Exception) {
             HttpResponse(
