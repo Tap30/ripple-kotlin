@@ -37,11 +37,11 @@ object RoomStorageAdapterFactory {
         databaseName: String = "ripple_events.db"
     ): StorageAdapter {
         val database = Room.databaseBuilder(
-            context.applicationContext,
-            RippleDatabase::class.java,
-            databaseName
+            context = context.applicationContext,
+            klass = RippleDatabase::class.java,
+            name = databaseName
         )
-        .fallbackToDestructiveMigration() // For simplicity in v1
+        .fallbackToDestructiveMigration() //todo For simplicity in v1
         .build()
         
         return RoomStorageAdapter(database)

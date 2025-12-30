@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
     id("android-publishing-convention")
+    alias(libs.plugins.ksp)
 }
 
 android {
@@ -29,8 +30,9 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     
     // Room dependencies
-    implementation("androidx.room:room-runtime:2.6.1")
-    implementation("androidx.room:room-ktx:2.6.1")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

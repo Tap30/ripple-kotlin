@@ -8,7 +8,7 @@ dependencies {
     api(project(":core"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
+    implementation(libs.module.jackson.module.kotlin)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

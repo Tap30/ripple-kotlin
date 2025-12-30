@@ -7,8 +7,8 @@ plugins {
 
 dependencies {
     api(project(":spring:spring-core"))
-    implementation("org.springframework.boot:spring-boot-starter-webflux:3.2.0")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.3")
+    implementation(libs.boot.spring.boot.starter.webflux)
+    implementation(libs.module.jackson.module.kotlin)
     implementation(libs.kotlinx.coroutines.reactive)
     implementation(libs.kotlinx.serialization.json)
     

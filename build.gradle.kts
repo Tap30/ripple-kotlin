@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.android.library) apply false
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
+    alias(libs.plugins.ksp) apply false
     // TODO: Uncomment when ready for Maven Central
     // alias(libs.plugins.nexus.publish)
 }
@@ -22,7 +23,8 @@ allprojects {
         maven {
             url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
             credentials {
-                username = System.getenv("GITHUB_ACTOR") ?: findProperty("githubUsername") as String?
+                username =
+                    System.getenv("GITHUB_ACTOR") ?: findProperty("githubUsername") as String?
                 password = System.getenv("GITHUB_TOKEN") ?: findProperty("githubToken") as String?
             }
         }

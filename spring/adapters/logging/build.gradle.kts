@@ -6,7 +6,7 @@ plugins {
 
 dependencies {
     api(project(":core"))
-    implementation("org.slf4j:slf4j-api:2.0.9")
+    implementation(libs.slf4j.slf4j.api)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)
