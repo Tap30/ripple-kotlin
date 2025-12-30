@@ -41,7 +41,7 @@ jobs:
         build-scan-terms-of-use-agree: "yes"
 
     - name: Run tests
-      run: ./gradlew test --no-daemon --stacktrace --info
+      run: ./gradlew test --no-daemon
       timeout-minutes: 30
     
     - name: Upload test results
