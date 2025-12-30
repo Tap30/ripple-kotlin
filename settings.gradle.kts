@@ -27,7 +27,7 @@ include(
     ":reactive:adapters:reactor",
     
     // Sample modules
-//    ":samples:android-sample",
-//    ":samples:spring-sample",
-//    ":samples:spring-java-sample",
+    ":samples:android-sample",
+    ":samples:spring-sample",
+    ":samples:spring-java-sample",
 )
