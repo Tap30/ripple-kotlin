@@ -13,7 +13,7 @@ include(
     
     // Platform core modules
     ":android:android-core",
-    ":spring:spring-core", 
+//    ":spring:spring-core",
     ":reactive:reactive-core",
     
     // Platform adapter modules
@@ -27,7 +27,7 @@ include(
     ":reactive:adapters:reactor",
     
     // Sample modules
-    ":samples:android-sample",
-    ":samples:spring-sample",
-    ":samples:spring-java-sample",
+//    ":samples:android-sample",
+//    ":samples:spring-sample",
+//    ":samples:spring-java-sample",
 )
