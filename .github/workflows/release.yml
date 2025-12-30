@@ -31,11 +31,11 @@ jobs:
     - name: mamad
       run: echo "Actor is $GITHUB_ACTOR"
 
-    - name: mamad2
-      run: echo "Actor is ${{ secrets.GITHUB_TOKEN }}
-
     - name: Copy CI gradle.properties
       run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
+
+    - name: mamad
+      run: echo "Actor is $GITHUB_ACTOR"
     
     - name: Set up JDK 17
       uses: actions/setup-java@v4
