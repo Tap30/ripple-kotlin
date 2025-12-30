@@ -2,7 +2,7 @@
 kotlin = "2.3.0"
 ksp = "2.3.0"
 android-gradle = "8.13.2"
-room = "2.6.1"
+room = "2.7.1"
 slf4j-api = "2.0.9"
 spring-boot = "3.2.0"
 spring-boot-starter-webflux = "3.2.0"
