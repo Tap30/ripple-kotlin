@@ -13,7 +13,7 @@ include(
     
     // Platform core modules
     ":android:android-core",
-//    ":spring:spring-core",
+    ":spring:spring-core",
     ":reactive:reactive-core",
     
     // Platform adapter modules
