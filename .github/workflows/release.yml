@@ -27,7 +27,13 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-    
+
+    - name: mamad
+      run: echo "Actor is $GITHUB_ACTOR"
+
+    - name: mamad2
+      run: echo "Actor is ${{ secrets.GITHUB_TOKEN }}
+
     - name: Copy CI gradle.properties
       run: mkdir -p ~/.gradle && cp .github/ci-gradle.properties ~/.gradle/gradle.properties
     
