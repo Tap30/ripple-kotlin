@@ -1,15 +1,9 @@
 name: Release
 
-#on:
-#  push:
-#    tags: [ '*' ]
-
 on:
-  workflow_dispatch:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    tags: [ '*' ]
+
 
 concurrency:
   group: release-${{ github.ref }}
