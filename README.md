@@ -18,33 +18,114 @@ A high-performance event tracking SDK for Kotlin and Java applications.
 
 ## Download
 
+### Repository Setup
+
+<details open>
+<summary><strong>Kotlin DSL (build.gradle.kts)</strong></summary>
+
+```kotlin
+repositories {
+    mavenCentral()
+    maven {
+        name = "GitHubPackages"
+        url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
+        credentials {
+            username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+        }
+    }
+}
+```
+
+</details>
+
+<details>
+<summary><strong>Groovy DSL (build.gradle)</strong></summary>
+
+```groovy
+repositories {
+    mavenCentral()
+    maven {
+        name = "GitHubPackages"
+        url = "https://maven.pkg.github.com/Tap30/ripple-kotlin"
+        credentials {
+            username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+            password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+        }
+    }
+}
+```
+
+</details>
+
 ### Core Modules
 
 ```kotlin
 // Core functionality
-implementation("com.tapsioss.ripple:core:1.0.0")
+implementation("io.github.tap30.ripple:core:1.0.0")
 
 // Platform modules (lightweight, no adapters included)
-implementation("com.tapsioss.ripple:android-core:1.0.0")
-implementation("com.tapsioss.ripple:spring-core:1.0.0")
-implementation("com.tapsioss.ripple:reactive-core:1.0.0")
+implementation("io.github.tap30.ripple:android-core:1.0.0")
+implementation("io.github.tap30.ripple:spring-core:1.0.0")
+implementation("io.github.tap30.ripple:reactive-core:1.0.0")
 ```
 
 ### Adapter Modules (Optional)
 
 Choose only the adapters you need:
 
+<details open>
+<summary><strong>Android Adapters</strong></summary>
+
 ```kotlin
-// Android adapters
-implementation("com.tapsioss.ripple:android-adapters-okhttp:1.0.0")    // HTTP with OkHttp
-implementation("com.tapsioss.ripple:android-adapters-room:1.0.0")      // Storage with Room
+// HTTP with OkHttp
+implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
+// → OkHttpAdapter
 
-// Spring adapters  
-implementation("com.tapsioss.ripple:spring-adapters-webflux:1.0.0")    // HTTP with WebClient
+// Storage with SharedPreferences  
+implementation("io.github.tap30.ripple:android-adapters-storage-preferences:1.0.0")
+// → SharedPreferencesAdapter
 
-// Reactive adapters
-implementation("com.tapsioss.ripple:reactive-adapters-reactor:1.0.0")   // Project Reactor support
+// Storage with Room Database
+implementation("io.github.tap30.ripple:android-adapters-room:1.0.0") 
+// → RoomStorageAdapter, RoomStorageAdapterFactory
+
+// Android Logging
+implementation("io.github.tap30.ripple:android-adapters-logging:1.0.0")
+// → AndroidLogAdapter
 ```
+
+</details>
+
+<details>
+<summary><strong>Spring Adapters</strong></summary>
+
+```kotlin
+// HTTP with WebClient (WebFlux)
+implementation("io.github.tap30.ripple:spring-adapters-webflux:1.0.0")
+// → WebClientAdapter
+
+// File System Storage
+implementation("io.github.tap30.ripple:spring-adapters-storage-file:1.0.0")
+// → FileStorageAdapter
+
+// SLF4J Logging
+implementation("io.github.tap30.ripple:spring-adapters-logging:1.0.0")
+// → Slf4jLoggerAdapter
+```
+
+</details>
+
+<details>
+<summary><strong>Reactive Adapters</strong></summary>
+
+```kotlin
+// Project Reactor Support
+implementation("io.github.tap30.ripple:reactive-adapters-reactor:1.0.0")
+// → ReactorAdapter (coming soon)
+```
+
+</details>
 
 ## Quick Start
 
@@ -52,9 +133,9 @@ implementation("com.tapsioss.ripple:reactive-adapters-reactor:1.0.0")   // Proje
 
 ```kotlin
 // Add dependencies
-implementation("com.tapsioss.ripple:android-core:1.0.0")
-implementation("com.tapsioss.ripple:android-adapters-okhttp:1.0.0")
-implementation("com.tapsioss.ripple:android-adapters-room:1.0.0")
+implementation("io.github.tap30.ripple:android-core:1.0.0")
+implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
+implementation("io.github.tap30.ripple:android-adapters-room:1.0.0")
 
 // Usage
 import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
