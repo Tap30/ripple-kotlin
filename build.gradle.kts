@@ -13,7 +13,7 @@ plugins {
 
 // Set version from gradle.properties
 allprojects {
-    group = "com.tapsioss.ripple"
+    group = "io.github.tap30.ripple"
     version = property("VERSION_NAME") as String
 
     repositories {
