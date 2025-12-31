@@ -39,11 +39,6 @@ jobs:
         distribution: 'zulu'
         java-version: 17
 
-    - name: Debug token presence
-      run: |
-        echo "actor=$GITHUB_ACTOR"
-        if [ -n "$GITHUB_TOKEN" ]; then echo "token=present"; else echo "token=missing"; fi
-
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
       with:
