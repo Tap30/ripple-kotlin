@@ -36,6 +36,14 @@ android {
             withJavadocJar()
         }
     }
+    
+    // Configure JAR name to match artifactId
+    libraryVariants.all {
+        outputs.all {
+            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = 
+                "android-adapters-room-${project.version}.aar"
+        }
+    }
 }
 
 // Configure artifact name for Android module

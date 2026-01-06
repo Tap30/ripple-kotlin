@@ -4,6 +4,11 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure JAR name to match artifactId
+tasks.jar {
+    archiveBaseName.set("spring-adapters-logging")
+}
+
 // Configure artifact name to avoid conflicts
 publishing {
     publications {

@@ -5,6 +5,20 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure JAR name to match artifactId
+tasks.jar {
+    archiveBaseName.set("spring-adapters-webflux")
+}
+
+// Configure artifact name to avoid conflicts
+publishing {
+    publications {
+        named<MavenPublication>("maven") {
+            artifactId = "spring-adapters-webflux"
+        }
+    }
+}
+
 dependencies {
     api(project(":spring:spring-core"))
     implementation(libs.boot.spring.boot.starter.webflux)

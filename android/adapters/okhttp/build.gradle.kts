@@ -4,6 +4,11 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure JAR name to match artifactId
+tasks.jar {
+    archiveBaseName.set("android-adapters-okhttp")
+}
+
 // Configure artifact name
 publishing {
     publications {
