@@ -4,6 +4,15 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure artifact name to avoid conflicts
+publishing {
+    publications {
+        named<MavenPublication>("maven") {
+            artifactId = "android-adapters-logging"
+        }
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     

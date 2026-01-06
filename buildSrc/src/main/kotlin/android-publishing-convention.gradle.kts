@@ -25,7 +25,6 @@ afterEvaluate {
                         developer {
                             id.set("tap30")
                             name.set("Tap30 Team")
-                            email.set("developers@tap30.org")
                         }
                     }
                     
@@ -37,15 +36,17 @@ afterEvaluate {
                 }
             }
         }
-    }
-}
-
-signing {
-    val signingKeyId = findProperty("signing.keyId") as String? ?: System.getenv("SIGNING_KEY_ID")
-    val signingPassword = findProperty("signing.password") as String? ?: System.getenv("SIGNING_PASSWORD")
-    val signingSecretKeyRingFile = findProperty("signing.secretKeyRingFile") as String? ?: System.getenv("SIGNING_SECRET_KEY_RING_FILE")
-    
-    if (signingKeyId != null && signingPassword != null && signingSecretKeyRingFile != null) {
-        sign(publishing.publications["maven"])
+        
+        repositories {
+            // GitHub Packages
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
+                credentials {
+                    username = System.getenv("GITHUB_ACTOR") ?: findProperty("githubUsername") as String?
+                    password = System.getenv("GITHUB_TOKEN") ?: findProperty("githubToken") as String?
+                }
+            }
+        }
     }
 }

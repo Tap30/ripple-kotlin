@@ -1,12 +1,30 @@
+import gradle.kotlin.dsl.accessors._d89d17b823009f0d56c867f95dae04f1.javadoc
+import gradle.kotlin.dsl.accessors._d89d17b823009f0d56c867f95dae04f1.main
+import gradle.kotlin.dsl.accessors._d89d17b823009f0d56c867f95dae04f1.sourceSets
+
 plugins {
     `maven-publish`
     signing
+    `java-library`
+}
+
+tasks.register<Jar>("sourcesJar") {
+    archiveClassifier.set("sources")
+    from(sourceSets.main.get().allSource)
+}
+
+tasks.register<Jar>("javadocJar") {
+    archiveClassifier.set("javadoc")
+    from(tasks.javadoc)
 }
 
 publishing {
     publications {
         create<MavenPublication>("maven") {
             from(components["java"])
+            
+            artifact(tasks["sourcesJar"])
+            artifact(tasks["javadocJar"])
             
             pom {
                 name.set("Ripple Kotlin SDK - ${project.name}")

@@ -4,6 +4,15 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure artifact name
+publishing {
+    publications {
+        named<MavenPublication>("maven") {
+            artifactId = "android-adapters-okhttp"
+        }
+    }
+}
+
 dependencies {
     implementation(project(":core"))
     api(libs.okhttp)

@@ -4,6 +4,15 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure artifact name to avoid conflicts
+publishing {
+    publications {
+        named<MavenPublication>("maven") {
+            artifactId = "spring-adapters-logging"
+        }
+    }
+}
+
 dependencies {
     api(project(":core"))
     implementation(libs.slf4j.slf4j.api)

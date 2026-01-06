@@ -29,6 +29,24 @@ android {
             jvmTarget = JvmTarget.fromTarget("17")
         }
     }
+    
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+            withJavadocJar()
+        }
+    }
+}
+
+// Configure artifact name for Android module
+afterEvaluate {
+    publishing {
+        publications {
+            named<MavenPublication>("maven") {
+                artifactId = "android-adapters-room"
+            }
+        }
+    }
 }
 
 dependencies {
