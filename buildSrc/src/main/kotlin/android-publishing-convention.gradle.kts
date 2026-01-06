@@ -3,6 +3,11 @@ plugins {
     signing
 }
 
+// Disable automatic Javadoc generation for Android libraries
+tasks.withType<Javadoc> {
+    enabled = false
+}
+
 afterEvaluate {
     publishing {
         publications {
