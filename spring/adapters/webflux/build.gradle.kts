@@ -6,7 +6,7 @@ plugins {
 }
 
 // Configure JAR name to match artifactId
-tasks.jar {
+tasks.withType<Jar> {
     archiveBaseName.set("spring-adapters-webflux")
 }
 
