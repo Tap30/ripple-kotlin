@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
             )
         )
 
-        rippleClient = AndroidRippleClient(this, config)
+        rippleClient = AndroidRippleClient(config)
         rippleClient.init()
 
         setContent {

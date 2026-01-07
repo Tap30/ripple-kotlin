@@ -1,6 +1,5 @@
 package com.tapsioss.ripple.android
 
-import android.content.Context
 import com.tapsioss.ripple.core.DeviceInfo
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
@@ -13,13 +12,9 @@ import com.tapsioss.ripple.core.SessionIdGenerator
  * Provides event tracking optimized for Android applications with
  * automatic session management and platform detection.
  * 
- * @param context Android application context
  * @param config Ripple configuration
  */
-class AndroidRippleClient(
-    private val context: Context,
-    config: RippleConfig
-) : RippleClient(config) {
+class AndroidRippleClient(config: RippleConfig) : RippleClient(config) {
     
     private val sessionId: String = SessionIdGenerator.generate()
 
