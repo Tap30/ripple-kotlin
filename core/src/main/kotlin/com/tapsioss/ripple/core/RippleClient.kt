@@ -15,6 +15,8 @@ package com.tapsioss.ripple.core
  * client.track("button_clicked", mapOf("button" to "submit"))
  * client.flush()
  * client.dispose()
+ * // Can re-initialize after dispose
+ * client.init()
  * ```
  * 
  * @param config Configuration for the client
@@ -22,21 +24,9 @@ package com.tapsioss.ripple.core
 abstract class RippleClient(
     protected val config: RippleConfig
 ) {
-    internal val metadataManager = MetadataManager()
+    private val metadataManager = MetadataManager()
     
-    protected val dispatcher = Dispatcher(
-        config = Dispatcher.DispatcherConfig(
-            endpoint = config.endpoint,
-            apiKey = config.apiKey,
-            apiKeyHeader = config.apiKeyHeader,
-            flushInterval = config.flushInterval,
-            maxBatchSize = config.maxBatchSize,
-            maxRetries = config.maxRetries
-        ),
-        httpAdapter = config.adapters.httpAdapter,
-        storageAdapter = config.adapters.storageAdapter,
-        loggerAdapter = config.adapters.loggerAdapter
-    )
+    private var dispatcher: Dispatcher? = null
     
     @Volatile
     protected var isInitialized = false
@@ -48,7 +38,8 @@ abstract class RippleClient(
      * flush scheduler. Must be called before tracking events.
      * 
      * This method is idempotent - calling it multiple times has no effect.
-     * Thread-safe and non-blocking.
+     * Thread-safe and non-blocking. Can be called after dispose() to
+     * re-initialize the client.
      */
     open fun init() {
         if (isInitialized) return
@@ -56,8 +47,9 @@ abstract class RippleClient(
         synchronized(this) {
             if (isInitialized) return
             
-            dispatcher.restore()
-            dispatcher.startScheduledFlush()
+            dispatcher = createDispatcher()
+            dispatcher?.restore()
+            dispatcher?.startScheduledFlush()
             isInitialized = true
             config.adapters.loggerAdapter?.info("RippleClient initialized")
         }
@@ -90,7 +82,7 @@ abstract class RippleClient(
             platform = getPlatform()
         )
 
-        dispatcher.enqueue(event)
+        dispatcher?.enqueue(event)
     }
 
     /**
@@ -109,6 +101,13 @@ abstract class RippleClient(
     }
 
     /**
+     * Get all stored metadata as a shallow copy.
+     * 
+     * @return Copy of all metadata, empty map if none set
+     */
+    fun getMetadata(): Map<String, Any> = metadataManager.getAll()
+
+    /**
      * Remove a global metadata key.
      * 
      * @param key Metadata key to remove
@@ -125,6 +124,16 @@ abstract class RippleClient(
     }
 
     /**
+     * Get the current session ID.
+     * 
+     * Session ID is auto-generated on client creation and persists
+     * for the lifetime of the client instance.
+     * 
+     * @return Current session ID or null if not available
+     */
+    abstract fun getSessionId(): String?
+
+    /**
      * Flush queued events to the server.
      * 
      * Non-blocking - submits flush work to background thread and returns
@@ -135,7 +144,7 @@ abstract class RippleClient(
      */
     fun flush() {
         if (!isInitialized) return
-        dispatcher.flush()
+        dispatcher?.flush()
     }
 
     /**
@@ -147,7 +156,7 @@ abstract class RippleClient(
      */
     fun flushSync() {
         if (!isInitialized) return
-        dispatcher.flushSync()
+        dispatcher?.flushSync()
     }
 
     /**
@@ -155,13 +164,13 @@ abstract class RippleClient(
      * 
      * @return Number of events waiting to be sent
      */
-    fun getQueueSize(): Int = dispatcher.getQueueSize()
+    fun getQueueSize(): Int = dispatcher?.getQueueSize() ?: 0
 
     /**
      * Clean up resources and stop background operations.
      * 
      * Persists any unsent events to storage for later retry.
-     * After calling dispose, the client cannot be used again.
+     * After calling dispose, the client can be re-initialized by calling init().
      * 
      * This method is idempotent - calling it multiple times has no effect.
      */
@@ -171,23 +180,34 @@ abstract class RippleClient(
         synchronized(this) {
             if (!isInitialized) return
             
-            dispatcher.dispose()
+            dispatcher?.dispose()
+            dispatcher = null
             isInitialized = false
             config.adapters.loggerAdapter?.info("RippleClient disposed")
         }
     }
 
     /**
-     * Get session ID for the current client instance.
-     * Platform-specific implementation.
-     */
-    protected abstract fun getSessionId(): String?
-
-    /**
      * Get platform information for event context.
      * Platform-specific implementation.
      */
     protected abstract fun getPlatform(): Platform?
+
+    private fun createDispatcher(): Dispatcher {
+        return Dispatcher(
+            config = Dispatcher.DispatcherConfig(
+                endpoint = config.endpoint,
+                apiKey = config.apiKey,
+                apiKeyHeader = config.apiKeyHeader,
+                flushInterval = config.flushInterval,
+                maxBatchSize = config.maxBatchSize,
+                maxRetries = config.maxRetries
+            ),
+            httpAdapter = config.adapters.httpAdapter,
+            storageAdapter = config.adapters.storageAdapter,
+            loggerAdapter = config.adapters.loggerAdapter ?: ConsoleLoggerAdapter()
+        )
+    }
 
     private fun checkInitialized() {
         if (!isInitialized) {

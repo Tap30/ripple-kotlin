@@ -30,4 +30,5 @@ include(
     ":samples:android-sample",
     ":samples:spring-sample",
     ":samples:spring-java-sample",
+    ":samples:test-server",
 )

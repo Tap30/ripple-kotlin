@@ -7,14 +7,15 @@ A high-performance event tracking SDK for Kotlin and Java applications.
 
 ## Features
 
-- 🚀 **High Performance**: Efficient queue management with automatic batching
-- 🔄 **Built-in Retry Logic**: Exponential backoff with jitter for failed requests
-- 🔒 **Thread-Safe**: All operations are thread-safe, no synchronization needed
-- 💾 **Offline Support**: Events are persisted and sent when connectivity returns
-- 🌐 **Multi-Platform**: Android, Spring Boot, and pure Java support
-- 📘 **Type-Safe**: Full Kotlin type safety with seamless Java interoperability
+- 🚀 **High Performance**: O(1) queue operations with automatic batching
+- 🔄 **Smart Retry Logic**: Exponential backoff with jitter, 4xx vs 5xx handling
+- 🔒 **Thread-Safe**: All operations are thread-safe with mutex-protected flushes
+- 💾 **Offline Support**: Events persisted and sent when connectivity returns
+- 🌐 **Multi-Platform**: Android, Spring Boot, and reactive support
+- 📘 **Type-Safe**: Full Kotlin type safety with Java interoperability
 - 🔌 **Pluggable Adapters**: Customize HTTP, storage, and logging behavior
-- ⚡ **No Coroutines Required**: Simple function calls, no async complexity
+- ♻️ **Re-initializable**: Supports dispose/init cycles for lifecycle management
+- 🔢 **Multi-Instance**: Run multiple client instances with different configs
 
 ## Download
 
@@ -282,15 +283,17 @@ public class UserService {
 
 | Method | Description |
 |--------|-------------|
-| `init()` | Initialize the client. Must be called before tracking. |
+| `init()` | Initialize the client. Must be called before tracking. Can be called after dispose(). |
 | `track(name, payload?, metadata?)` | Track an event with optional payload and metadata. |
 | `setMetadata(key, value)` | Set global metadata attached to all events. |
+| `getMetadata()` | Get all stored metadata as a shallow copy. |
+| `getSessionId()` | Get the current session ID. |
 | `removeMetadata(key)` | Remove a global metadata key. |
 | `clearMetadata()` | Clear all global metadata. |
 | `flush()` | Flush queued events asynchronously. |
 | `flushSync()` | Flush queued events and wait for completion. |
 | `getQueueSize()` | Get the number of queued events. |
-| `dispose()` | Clean up resources. Persists unsent events. |
+| `dispose()` | Clean up resources. Persists unsent events. Supports re-initialization. |
 
 ### RippleConfig
 
@@ -320,6 +323,52 @@ Events are automatically persisted when:
 - `dispose()` is called with events in queue
 
 Persisted events are restored on next `init()` call.
+
+## Multi-Instance Support
+
+The SDK supports running multiple client instances simultaneously with different configurations:
+
+```kotlin
+// Analytics client
+val analyticsClient = AndroidRippleClient(context, RippleConfig(
+    apiKey = "analytics-key",
+    endpoint = "https://analytics.example.com/events",
+    adapters = AdapterConfig(...)
+))
+
+// Monitoring client  
+val monitoringClient = AndroidRippleClient(context, RippleConfig(
+    apiKey = "monitoring-key",
+    endpoint = "https://monitoring.example.com/events",
+    adapters = AdapterConfig(...)
+))
+
+analyticsClient.init()
+monitoringClient.init()
+
+// Track to different endpoints
+analyticsClient.track("user_action", mapOf("action" to "click"))
+monitoringClient.track("performance", mapOf("latency" to 150))
+```
+
+Each instance maintains its own:
+- Event queue
+- Metadata storage
+- Session ID
+- Flush scheduler
+
+## Retry Behavior
+
+The SDK handles HTTP errors intelligently:
+
+| Status Code | Behavior |
+|-------------|----------|
+| 2xx | Success - clear storage |
+| 4xx | No retry - persist events |
+| 5xx | Retry with exponential backoff |
+| Network error | Retry with exponential backoff |
+
+Backoff formula: `delay = (1000ms × 2^attempt) + jitter(0-1000ms)`, max 30 seconds.
 
 ## Documentation
 
