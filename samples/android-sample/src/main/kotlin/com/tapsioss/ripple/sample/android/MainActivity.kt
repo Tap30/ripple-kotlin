@@ -1,9 +1,13 @@
 package com.tapsioss.ripple.sample.android
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.tapsioss.ripple.android.AndroidRippleClient
 import com.tapsioss.ripple.android.adapters.logging.AndroidLogAdapter
 import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
@@ -12,19 +16,13 @@ import com.tapsioss.ripple.core.AdapterConfig
 import com.tapsioss.ripple.core.RippleConfig
 import com.tapsioss.ripple.core.adapters.LogLevel
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
     lateinit var rippleClient: AndroidRippleClient
-    private lateinit var tvStatus: TextView
-    private var eventCounter = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
 
-        tvStatus = findViewById(R.id.tvStatus)
-
-        // Use 10.0.2.2 for emulator, or Mac's IP for physical device
         val endpoint = intent.getStringExtra("endpoint") ?: "${TestConfig.SERVER_URL}/events"
 
         val config = RippleConfig(
@@ -42,39 +40,73 @@ class MainActivity : AppCompatActivity() {
         rippleClient = AndroidRippleClient(this, config)
         rippleClient.init()
 
-        setupButtons()
-        updateStatus("Initialized")
-    }
-
-    private fun setupButtons() {
-        findViewById<Button>(R.id.btnTrackEvent).setOnClickListener {
-            eventCounter++
-            rippleClient.track("test_event", mapOf("counter" to eventCounter))
-            updateStatus("Tracked event #$eventCounter")
+        setContent {
+            MaterialTheme {
+                RippleSampleScreen(rippleClient)
+            }
         }
-
-        findViewById<Button>(R.id.btnSetMetadata).setOnClickListener {
-            rippleClient.setMetadata("user_id", "test-user-123")
-            updateStatus("Metadata set")
-        }
-
-        findViewById<Button>(R.id.btnFlush).setOnClickListener {
-            rippleClient.flush()
-            updateStatus("Flush triggered")
-        }
-
-        findViewById<Button>(R.id.btnClearMetadata).setOnClickListener {
-            rippleClient.clearMetadata()
-            updateStatus("Metadata cleared")
-        }
-    }
-
-    private fun updateStatus(message: String) {
-        tvStatus.text = "Status: $message"
     }
 
     override fun onDestroy() {
         super.onDestroy()
         rippleClient.dispose()
+    }
+}
+
+@Composable
+fun RippleSampleScreen(client: AndroidRippleClient) {
+    var status by remember { mutableStateOf("Initialized") }
+    var eventCounter by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Button(
+            onClick = {
+                eventCounter++
+                client.track("test_event", mapOf("counter" to eventCounter))
+                status = "Tracked event #$eventCounter"
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Track Event")
+        }
+
+        Button(
+            onClick = {
+                client.setMetadata("user_id", "test-user-123")
+                status = "Metadata set"
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Set Metadata")
+        }
+
+        Button(
+            onClick = {
+                client.flush()
+                status = "Flush triggered"
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Flush")
+        }
+
+        Button(
+            onClick = {
+                client.clearMetadata()
+                status = "Metadata cleared"
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Clear Metadata")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(text = "Status: $status")
     }
 }

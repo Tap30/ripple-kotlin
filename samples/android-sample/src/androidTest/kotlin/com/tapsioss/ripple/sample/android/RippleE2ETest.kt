@@ -1,9 +1,7 @@
 package com.tapsioss.ripple.sample.android
 
-import androidx.test.espresso.Espresso.onView
-import androidx.test.espresso.action.ViewActions.click
-import androidx.test.espresso.matcher.ViewMatchers.withId
-import androidx.test.ext.junit.rules.ActivityScenarioRule
+import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -17,7 +15,7 @@ import org.junit.runner.RunWith
 class RippleE2ETest {
 
     @get:Rule
-    val activityRule = ActivityScenarioRule(MainActivity::class.java)
+    val composeRule = createAndroidComposeRule<MainActivity>()
 
     private val serverClient = TestServerClient()
 
@@ -34,10 +32,10 @@ class RippleE2ETest {
 
     @Test
     fun trackEvent_sendsToServer() {
-        onView(withId(R.id.btnTrackEvent)).perform(click())
-        onView(withId(R.id.btnFlush)).perform(click())
+        composeRule.onNodeWithText("Track Event").performClick()
+        composeRule.onNodeWithText("Flush").performClick()
 
-        Thread.sleep(2000) // Wait for network
+        Thread.sleep(2000)
 
         val events = serverClient.getEvents()
         assertTrue("Expected at least 1 event", events.isNotEmpty())
@@ -46,9 +44,9 @@ class RippleE2ETest {
 
     @Test
     fun setMetadata_attachedToEvents() {
-        onView(withId(R.id.btnSetMetadata)).perform(click())
-        onView(withId(R.id.btnTrackEvent)).perform(click())
-        onView(withId(R.id.btnFlush)).perform(click())
+        composeRule.onNodeWithText("Set Metadata").performClick()
+        composeRule.onNodeWithText("Track Event").performClick()
+        composeRule.onNodeWithText("Flush").performClick()
 
         Thread.sleep(2000)
 
@@ -61,9 +59,9 @@ class RippleE2ETest {
     @Test
     fun batchEvents_sentTogether() {
         repeat(3) {
-            onView(withId(R.id.btnTrackEvent)).perform(click())
+            composeRule.onNodeWithText("Track Event").performClick()
         }
-        onView(withId(R.id.btnFlush)).perform(click())
+        composeRule.onNodeWithText("Flush").performClick()
 
         Thread.sleep(2000)
 
@@ -73,10 +71,10 @@ class RippleE2ETest {
 
     @Test
     fun clearMetadata_removesFromEvents() {
-        onView(withId(R.id.btnSetMetadata)).perform(click())
-        onView(withId(R.id.btnClearMetadata)).perform(click())
-        onView(withId(R.id.btnTrackEvent)).perform(click())
-        onView(withId(R.id.btnFlush)).perform(click())
+        composeRule.onNodeWithText("Set Metadata").performClick()
+        composeRule.onNodeWithText("Clear Metadata").performClick()
+        composeRule.onNodeWithText("Track Event").performClick()
+        composeRule.onNodeWithText("Flush").performClick()
 
         Thread.sleep(2000)
 
