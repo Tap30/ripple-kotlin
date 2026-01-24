@@ -1,6 +1,7 @@
 package com.tapsioss.ripple.core
 
 import com.tapsioss.ripple.core.adapters.HttpAdapter
+import com.tapsioss.ripple.core.adapters.NoOpLoggerAdapter
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import io.mockk.*
 import org.junit.jupiter.api.AfterEach
