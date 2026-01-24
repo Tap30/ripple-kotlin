@@ -200,8 +200,18 @@ class ConcurrencyTest {
         assertEquals(1, client.getQueueSize())
     }
     
-    private class TestRippleClient(config: RippleConfig) : RippleClient(config) {
-        override fun getSessionId(): String = SessionIdGenerator.generate()
+    private class TestRippleClient(config: RippleConfig) : RippleClient<TestEvent, TestMetadata>(config) {
         override fun getPlatform(): Platform = Platform.Server
+    }
+    
+    sealed class TestEvent : RippleEvent {
+        data class Login(val email: String) : TestEvent() {
+            override val name = "user.login"
+            override fun toPayload() = mapOf("email" to email)
+        }
+    }
+    
+    data class TestMetadata(val userId: String) : RippleMetadata {
+        override fun toMap() = mapOf("userId" to userId)
     }
 }

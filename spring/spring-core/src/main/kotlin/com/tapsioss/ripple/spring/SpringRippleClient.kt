@@ -1,25 +1,32 @@
 package com.tapsioss.ripple.spring
 
+import com.tapsioss.ripple.core.DefaultRippleEvent
+import com.tapsioss.ripple.core.DefaultRippleMetadata
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
-import com.tapsioss.ripple.core.SessionIdGenerator
+import com.tapsioss.ripple.core.RippleEvent
+import com.tapsioss.ripple.core.RippleMetadata
 
 /**
- * Spring-specific Ripple client implementation.
+ * Spring-specific Ripple client.
  * 
- * Provides event tracking optimized for Spring Boot applications.
- * Thread-safe and suitable for use as a singleton bean.
- * 
+ * @param TEvents Event type implementing [RippleEvent] for type-safe tracking
+ * @param TMetadata Metadata type implementing [RippleMetadata] for type-safe metadata
  * @param config Ripple configuration
  */
-class SpringRippleClient(
+class SpringRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     config: RippleConfig
-) : RippleClient(config) {
-    
-    private val sessionId: String = SessionIdGenerator.generate()
-
-    override fun getSessionId(): String = sessionId
+) : RippleClient<TEvents, TMetadata>(config) {
 
     override fun getPlatform(): Platform = Platform.Server
+
+    companion object {
+        /**
+         * Create an untyped Spring client for simple usage.
+         */
+        fun create(config: RippleConfig): SpringRippleClient<DefaultRippleEvent, DefaultRippleMetadata> {
+            return SpringRippleClient(config)
+        }
+    }
 }

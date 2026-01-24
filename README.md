@@ -139,9 +139,6 @@ implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
 implementation("io.github.tap30.ripple:android-adapters-room:1.0.0")
 
 // Usage
-import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
-import com.tapsioss.ripple.android.adapters.room.RoomStorageAdapterFactory
-
 val config = RippleConfig(
     apiKey = "your-api-key",
     endpoint = "https://api.example.com/events",
@@ -152,37 +149,56 @@ val config = RippleConfig(
     )
 )
 
-val client = AndroidRippleClient(context, config)
-
-// Initialize once (typically in Application.onCreate)
+val client = AndroidRippleClient(config)
 client.init()
 
-// Track simple events
+// Track events (untyped)
 client.track("user_login")
+client.track("purchase", mapOf("product_id" to "abc123", "amount" to 29.99))
 
-// Track events with properties
-client.track("purchase", mapOf(
-    "product_id" to "abc123",
-    "amount" to 29.99,
-    "currency" to "USD"
-))
-
-// Set global metadata (attached to all events)
+// Set global metadata
 client.setMetadata("user_id", "12345")
-client.setMetadata("app_version", "1.2.0")
 
-// Track with event-specific metadata
-client.track(
-    name = "page_view",
-    payload = mapOf("page" to "home"),
-    metadata = mapOf("experiment" to "variant_a")
-)
-
-// Manual flush (events auto-flush based on config)
-client.flush()
-
-// Clean up when done
+// Clean up
 client.dispose()
+```
+
+### Type-Safe Events (Recommended)
+
+Define your events with compile-time validation:
+
+```kotlin
+// Define events as sealed class
+sealed class AppEvent : RippleEvent {
+    data class UserLogin(val email: String, val method: String) : AppEvent() {
+        override val name = "user.login"
+        override fun toPayload() = mapOf("email" to email, "method" to method)
+    }
+    
+    data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
+        override val name = "purchase"
+        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+    }
+}
+
+// Define metadata
+data class AppMetadata(
+    val userId: String? = null,
+    val version: String? = null
+) : RippleMetadata {
+    override fun toMap() = buildMap {
+        userId?.let { put("userId", it) }
+        version?.let { put("version", it) }
+    }
+}
+
+// Usage - compile-time type checking
+client.track(AppEvent.UserLogin("user@example.com", "google"))
+client.track(AppEvent.Purchase("ORD-123", 99.99))
+client.setMetadata(AppMetadata(userId = "user-123", version = "1.0.0"))
+
+// Event-specific metadata
+client.track(AppEvent.Purchase("ORD-456", 50.0), AppMetadata(userId = "vip-user"))
 ```
 
 ### Spring Boot (Kotlin)

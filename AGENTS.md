@@ -10,6 +10,8 @@ The SDK follows a modular architecture with maximum code sharing and platform-sp
 ripple-kotlin/
 ├── core/                    # Shared core logic (thread-safe, coroutine-free)
 │   ├── RippleClient         # Abstract client with lifecycle management
+│   ├── RippleEvent          # Interface for type-safe events
+│   ├── RippleMetadata       # Interface for type-safe metadata
 │   ├── Dispatcher           # Queue management, batching, retry logic
 │   ├── MetadataManager      # Thread-safe metadata handling
 │   ├── Platform             # Sealed class for platform types
@@ -55,6 +57,72 @@ ripple-kotlin/
 - **Storage Adapters**: SharedPreferences, Room, File system, custom
 - **Logger Adapters**: Android Log, SLF4J, Console, NoOp
 
+## Type-Safe API
+
+### RippleEvent Interface
+
+Define type-safe events with compile-time validation:
+
+```kotlin
+interface RippleEvent {
+    val name: String
+    fun toPayload(): Map<String, Any>?
+}
+
+// User implementation
+sealed class AppEvent : RippleEvent {
+    data class UserLogin(val email: String, val method: String) : AppEvent() {
+        override val name = "user.login"
+        override fun toPayload() = mapOf("email" to email, "method" to method)
+    }
+    
+    data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
+        override val name = "purchase"
+        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+    }
+}
+
+// Type-safe tracking
+client.track(AppEvent.UserLogin("user@example.com", "google"))
+```
+
+### RippleMetadata Interface
+
+Define type-safe metadata:
+
+```kotlin
+interface RippleMetadata {
+    fun toMap(): Map<String, Any>
+}
+
+// User implementation
+data class AppMetadata(
+    val userId: String? = null,
+    val version: String? = null
+) : RippleMetadata {
+    override fun toMap() = buildMap {
+        userId?.let { put("userId", it) }
+        version?.let { put("version", it) }
+    }
+}
+
+// Type-safe metadata
+client.setMetadata(AppMetadata(userId = "123", version = "1.0.0"))
+client.track(event, AppMetadata(userId = "vip-user"))
+```
+
+### Track Method Overloads
+
+```kotlin
+// Type-safe event
+fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
+fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+
+// Untyped event
+fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
+fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
+```
+
 ## Core Module
 
 ### RippleClient (Abstract Base)
@@ -65,17 +133,23 @@ abstract class RippleClient(protected val config: RippleConfig) {
     fun init()                                    // Initialize, restore events, start scheduler
     fun dispose()                                 // Clean shutdown, persist events, supports re-init
     
-    // Event tracking
+    // Type-safe event tracking
+    fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
+    fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+    
+    // Untyped event tracking
     fun track(name: String, payload: Map<String, Any>?, metadata: Map<String, Any>?)
+    fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
     
     // Metadata management
-    fun setMetadata(key: String, value: Any)
-    fun getMetadata(): Map<String, Any>           // Returns shallow copy
+    fun setMetadata(metadata: RippleMetadata)     // Type-safe
+    fun setMetadata(key: String, value: Any)      // Untyped
+    fun getMetadata(): Map<String, Any>
     fun removeMetadata(key: String)
     fun clearMetadata()
     
     // Session
-    abstract fun getSessionId(): String?          // Public - format: {timestamp}-{random}
+    fun getSessionId(): String?                   // Format: {timestamp}-{random}
     
     // Flushing
     fun flush()                                   // Non-blocking
@@ -89,19 +163,11 @@ abstract class RippleClient(protected val config: RippleConfig) {
 
 **Key Implementation Details:**
 - Dispatcher is recreated on each `init()` call (supports re-initialization)
+- Session ID generated on `init()`, cleared on `dispose()`
 - Default logger is `ConsoleLoggerAdapter` with WARN level
 - Session ID format: `{timestamp}-{random}` (e.g., `1704567890123-456789`)
 
 ### Dispatcher (Queue Management)
-
-```kotlin
-class Dispatcher(
-    config: DispatcherConfig,
-    httpAdapter: HttpAdapter,
-    storageAdapter: StorageAdapter,
-    loggerAdapter: LoggerAdapter  // Non-nullable, defaults to ConsoleLoggerAdapter
-)
-```
 
 **Retry Logic:**
 - 2xx: Success, clear storage
@@ -119,8 +185,6 @@ max delay = 30 seconds
 Failed events are prepended to queue, not appended.
 
 ### Platform (Sealed Class)
-
-Per API contract, Platform is a discriminated union:
 
 ```kotlin
 sealed class Platform {
@@ -146,10 +210,7 @@ data class DeviceInfo(val name: String, val version: String)
 ### Built-in Loggers
 
 ```kotlin
-// Default logger with configurable level
 class ConsoleLoggerAdapter(level: LogLevel = LogLevel.WARN) : LoggerAdapter
-
-// Silent logger
 class NoOpLoggerAdapter : LoggerAdapter
 ```
 
@@ -158,8 +219,7 @@ class NoOpLoggerAdapter : LoggerAdapter
 ### Android Module
 
 ```kotlin
-class AndroidRippleClient(context: Context, config: RippleConfig) : RippleClient(config) {
-    override fun getSessionId(): String  // Format: {timestamp}-{random}
+class AndroidRippleClient(config: RippleConfig) : RippleClient(config) {
     override fun getPlatform(): Platform.Native
 }
 ```
@@ -174,7 +234,6 @@ Platform detection:
 
 ```kotlin
 class SpringRippleClient(config: RippleConfig) : RippleClient(config) {
-    override fun getSessionId(): String  // Format: {timestamp}-{random}
     override fun getPlatform(): Platform.Server
 }
 ```
@@ -183,7 +242,8 @@ class SpringRippleClient(config: RippleConfig) : RippleClient(config) {
 
 ```kotlin
 class ReactiveRippleClient(config: RippleConfig) : RippleClient(config) {
-    suspend fun trackReactive(name: String, payload: Map<String, Any>?, metadata: Map<String, Any>?)
+    suspend fun <T : RippleEvent> trackReactive(event: T)
+    suspend fun trackReactive(name: String, payload: Map<String, Any>?)
     fun getEventFlow(): Flow<Event>
     fun getEventFlux(): Flux<Event>
 }
@@ -268,7 +328,7 @@ This implementation follows the [Ripple SDK API Contract](https://github.com/Tap
 |---------------------|--------|-------|
 | `init()` before `track()` | ✅ | Throws IllegalStateException |
 | Re-initialization after dispose | ✅ | Dispatcher recreated |
-| `getSessionId()` public | ✅ | Abstract in base, implemented in platforms |
+| `getSessionId()` public | ✅ | Returns null before init |
 | `getMetadata()` method | ✅ | Returns shallow copy |
 | Session ID format | ✅ | `{timestamp}-{random}` |
 | Platform discriminated union | ✅ | Sealed class with Web/Native/Server |
@@ -279,8 +339,18 @@ This implementation follows the [Ripple SDK API Contract](https://github.com/Tap
 | Default logger | ✅ | ConsoleLoggerAdapter(WARN) |
 | Concurrency tests | ✅ | ConcurrencyTest.kt |
 | Multi-instance support | ✅ | Each instance independent |
+| Type-safe events | ✅ | RippleEvent interface |
+| Type-safe metadata | ✅ | RippleMetadata interface |
 
 ## Changelog
+
+### v1.0.0-alpha.4 (2026-01-07)
+- **Added**: `RippleEvent` interface for type-safe event tracking
+- **Added**: `RippleMetadata` interface for type-safe metadata
+- **Added**: Multiple `track()` overloads for typed/untyped usage
+- **Changed**: Session ID now managed internally by base client
+- **Changed**: `dispose()` clears metadata and session ID
+- **Removed**: Generic type parameters from client classes
 
 ### v1.0.0-alpha.3 (2026-01-07)
 - **Breaking**: Platform changed from data class to sealed class
