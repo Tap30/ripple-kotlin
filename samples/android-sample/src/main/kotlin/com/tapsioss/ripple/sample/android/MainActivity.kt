@@ -128,7 +128,8 @@ fun RippleSampleScreen(client: AndroidRippleClient<AppEvent, AppMetadata>) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(16.dp)
+            .systemBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Buttons section
