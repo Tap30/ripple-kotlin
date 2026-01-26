@@ -17,6 +17,9 @@ allprojects {
     version = property("VERSION_NAME") as String
 
     repositories {
+        maven {
+            url = uri("https://maven.myket.ir")
+        }
         google()
         mavenCentral()
         maven {
@@ -25,9 +28,6 @@ allprojects {
                 password = System.getenv("ARTIFACTORY_ANDROID_PASSWORD")
             }
             url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
-        }
-        maven {
-            url = uri("https://maven.myket.ir")
         }
         // Add GitHub Packages for consuming dependencies
         maven {
