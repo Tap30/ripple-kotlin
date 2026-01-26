@@ -42,5 +42,6 @@ publish artifactory:
     - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
   when:
     - manual
-#  only:
+  only:
+    - merge_requests
 #    - tags
