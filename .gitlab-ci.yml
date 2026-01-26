@@ -33,7 +33,7 @@ build:
     - merge_requests
 #    - tags
 
-publish_artifactory:
+publish artifactory:
   tags:
     - android-release
   stage: publish
