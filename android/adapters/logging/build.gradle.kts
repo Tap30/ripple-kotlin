@@ -19,7 +19,7 @@ publishing {
 }
 
 dependencies {
-    implementation(project(":core"))
+    api(project(":core"))
     
     // Use provided scope for Android dependencies
     compileOnly("com.google.android:android:4.1.1.4")

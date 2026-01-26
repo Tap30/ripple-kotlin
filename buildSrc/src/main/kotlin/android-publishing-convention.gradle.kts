@@ -13,26 +13,26 @@ afterEvaluate {
         publications {
             create<MavenPublication>("maven") {
                 from(components["release"])
-                
+
                 pom {
                     name.set("Ripple Kotlin SDK - ${project.name}")
                     description.set("High-performance, scalable, and fault-tolerant event tracking SDK for Kotlin and Java applications")
                     url.set("https://github.com/Tap30/ripple-kotlin")
-                    
+
                     licenses {
                         license {
                             name.set("MIT License")
                             url.set("https://opensource.org/licenses/MIT")
                         }
                     }
-                    
+
                     developers {
                         developer {
                             id.set("tap30")
                             name.set("Tap30 Team")
                         }
                     }
-                    
+
                     scm {
                         connection.set("scm:git:git://github.com/Tap30/ripple-kotlin.git")
                         developerConnection.set("scm:git:ssh://github.com:Tap30/ripple-kotlin.git")
@@ -41,7 +41,7 @@ afterEvaluate {
                 }
             }
         }
-        
+
         repositories {
             // GitHub Packages
             maven {
@@ -65,3 +65,4 @@ afterEvaluate {
         }
     }
 }
+

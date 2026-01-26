@@ -4,8 +4,21 @@ plugins {
     id("publishing-convention")
 }
 
+// Configure JAR name to match artifactId
+tasks.withType<Jar> {
+    archiveBaseName.set("android-adapters-storage-preferences")
+}
+
+// Configure artifact name to avoid conflicts
+publishing {
+    publications {
+        named<MavenPublication>("maven") {
+            artifactId = "android-adapters-storage-preferences"
+        }
+    }
+}
 dependencies {
-    implementation(project(":core"))
+    api(project(":core"))
     implementation(libs.kotlinx.serialization.json)
     
     // Use provided scope for Android dependencies

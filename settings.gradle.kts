@@ -30,8 +30,8 @@ include(
     
     // Platform adapter modules
     ":android:adapters:okhttp",
-    ":android:adapters:room",
     ":android:adapters:logging",
+    ":android:adapters:storage-room",
     ":android:adapters:storage-preferences",
     ":spring:adapters:webflux",
     ":spring:adapters:logging",

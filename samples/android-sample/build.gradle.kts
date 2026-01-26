@@ -39,7 +39,7 @@ android {
 dependencies {
     implementation(project(":android:android-core"))
     implementation(project(":android:adapters:okhttp"))
-    implementation(project(":android:adapters:room"))
+    implementation(project(":android:adapters:storage-room"))
     implementation(project(":android:adapters:logging"))
     implementation(project(":android:adapters:storage-preferences"))
     
