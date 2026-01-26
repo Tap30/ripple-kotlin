@@ -1,0 +1,43 @@
+stages:
+  - build
+  - publish
+
+variables:
+  GRADLE_OPTS: "-Dorg.gradle.daemon=false"
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+cache:
+  paths:
+    - .gradle/wrapper
+    - .gradle/caches
+
+before_script:
+  - chmod +x ./gradlew
+
+build:
+  stage: build
+  image: openjdk:17-jdk
+  script:
+    - ./gradlew build --no-daemon
+  artifacts:
+    reports:
+      junit: "**/build/test-results/test/TEST-*.xml"
+    paths:
+      - "**/build/libs/*.jar"
+    expire_in: 1 hour
+  only:
+    - main
+    - develop
+    - merge_requests
+    - tags
+
+publish_artifactory:
+  stage: publish
+  image: openjdk:17-jdk
+  script:
+    - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
+  only:
+    - tags
+  environment:
+    name: artifactory
+    url: https://artifactory.tapsi.tech
