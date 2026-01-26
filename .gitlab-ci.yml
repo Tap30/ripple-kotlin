@@ -21,12 +21,12 @@ build:
   image: openjdk:17-jdk
   script:
     - ./gradlew build --no-daemon
-  artifacts:
-    reports:
-      junit: "**/build/test-results/test/TEST-*.xml"
-    paths:
-      - "**/build/libs/*.jar"
-    expire_in: 1 hour
+#  artifacts:
+#    reports:
+#      junit: "**/build/test-results/test/TEST-*.xml"
+#    paths:
+#      - "**/build/libs/*.jar"
+#    expire_in: 1 hour
   only:
 #    - main
 #    - develop
