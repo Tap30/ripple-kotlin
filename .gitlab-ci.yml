@@ -20,23 +20,23 @@ cache:
     - .gradle/wrapper
     - .gradle/caches
 
-build:
-  tags:
-    - android-release
-  stage: build
-  script:
-    - ./gradlew build --no-daemon
-#  artifacts:
-#    reports:
-#      junit: "**/build/test-results/test/TEST-*.xml"
-#    paths:
-#      - "**/build/libs/*.jar"
-#    expire_in: 1 hour
-  only:
-#    - main
-#    - develop
-    - merge_requests
-#    - tags
+#build:
+#  tags:
+#    - android-release
+#  stage: build
+#  script:
+#    - ./gradlew build --no-daemon
+##  artifacts:
+##    reports:
+##      junit: "**/build/test-results/test/TEST-*.xml"
+##    paths:
+##      - "**/build/libs/*.jar"
+##    expire_in: 1 hour
+#  only:
+##    - main
+##    - develop
+#    - merge_requests
+##    - tags
 
 publish artifactory:
   tags:
