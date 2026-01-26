@@ -15,6 +15,8 @@ before_script:
   - chmod +x ./gradlew
 
 build:
+  tags:
+    - android-release
   stage: build
   image: openjdk:17-jdk
   script:
@@ -26,18 +28,20 @@ build:
       - "**/build/libs/*.jar"
     expire_in: 1 hour
   only:
-    - main
-    - develop
+#    - main
+#    - develop
     - merge_requests
-    - tags
+#    - tags
 
 publish_artifactory:
+  tags:
+    - android-release
   stage: publish
   image: openjdk:17-jdk
   script:
     - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
-  only:
-    - tags
+#  only:
+#    - tags
   environment:
     name: artifactory
     url: https://artifactory.tapsi.tech
