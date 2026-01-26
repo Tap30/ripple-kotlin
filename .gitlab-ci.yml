@@ -40,8 +40,7 @@ publish_artifactory:
   image: openjdk:17-jdk
   script:
     - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
+  when:
+    - manual
 #  only:
 #    - tags
-  environment:
-    name: artifactory
-    url: https://artifactory.tapsi.tech
