@@ -52,6 +52,16 @@ afterEvaluate {
                     password = System.getenv("GITHUB_TOKEN") ?: findProperty("githubToken") as String?
                 }
             }
+
+            // Tapsi Internal Artifactory
+            maven {
+                name = "TapsiArtifactory"
+                url = uri("https://artifactory.tapsi.tech/artifactory/tap30-release")
+                credentials {
+                    username = System.getenv("ARTIFACTORY_USERNAME") ?: findProperty("artifactoryUsername") as String?
+                    password = System.getenv("ARTIFACTORY_PASSWORD") ?: findProperty("artifactoryPassword") as String?
+                }
+            }
         }
     }
 }
