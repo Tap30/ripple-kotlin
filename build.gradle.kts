@@ -26,6 +26,9 @@ allprojects {
             }
             url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
         }
+        maven {
+            url = uri("https://maven.myket.ir")
+        }
         // Add GitHub Packages for consuming dependencies
         maven {
             url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")

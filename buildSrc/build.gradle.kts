@@ -10,6 +10,9 @@ repositories {
         }
         url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
     }
+    maven {
+        url = uri("https://maven.myket.ir")
+    }
     gradlePluginPortal()
     mavenCentral()
 }
