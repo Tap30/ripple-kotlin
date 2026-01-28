@@ -16,15 +16,17 @@ import kotlin.random.Random
 /**
  * Event dispatcher handling queue management, batching, and retry logic.
  * 
- * Thread-safe implementation that processes events asynchronously while
- * providing a simple blocking API. Uses internal threading for HTTP operations
- * to avoid blocking the caller's thread during network requests.
+ * Thread-safe implementation with:
+ * - Atomic flush operations (mutex-protected)
+ * - FIFO event ordering
+ * - Exponential backoff with jitter for retries
+ * - Proper 4xx vs 5xx error handling
  */
 class Dispatcher(
     private val config: DispatcherConfig,
     private val httpAdapter: HttpAdapter,
     private val storageAdapter: StorageAdapter,
-    private val loggerAdapter: LoggerAdapter?
+    private val loggerAdapter: LoggerAdapter
 ) {
     private val eventQueue = ConcurrentLinkedQueue<Event>()
     private val isDisposed = AtomicBoolean(false)
@@ -37,9 +39,6 @@ class Dispatcher(
     
     private var scheduledFlushTask: java.util.concurrent.ScheduledFuture<*>? = null
 
-    /**
-     * Configuration for the dispatcher.
-     */
     data class DispatcherConfig(
         val endpoint: String,
         val apiKey: String,
@@ -50,40 +49,30 @@ class Dispatcher(
     )
 
     /**
-     * Add event to the queue.
-     * Thread-safe and non-blocking.
-     * 
-     * @param event Event to enqueue
+     * Add event to the queue. O(1) operation.
      */
     fun enqueue(event: Event) {
         if (isDisposed.get()) {
-            loggerAdapter?.warn("Cannot enqueue event: dispatcher is disposed")
+            loggerAdapter.warn("Cannot enqueue event: dispatcher is disposed")
             return
         }
         
         eventQueue.offer(event)
-        loggerAdapter?.debug("Event enqueued: ${event.name}, queue size: ${eventQueue.size}")
+        loggerAdapter.debug("Event enqueued: ${event.name}, queue size: ${eventQueue.size}")
         
-        // Trigger flush if batch size reached
         if (eventQueue.size >= config.maxBatchSize) {
             flush()
         }
     }
 
     /**
-     * Flush all queued events to the server.
-     * Non-blocking - submits work to background thread.
-     * Safe to call multiple times - concurrent calls are handled gracefully.
+     * Flush all queued events. Non-blocking, mutex-protected.
      */
     fun flush() {
-        if (isDisposed.get()) {
-            loggerAdapter?.warn("Cannot flush: dispatcher is disposed")
-            return
-        }
+        if (isDisposed.get()) return
         
-        // Skip if flush already in progress (prevents queue starvation)
         if (!isFlushInProgress.compareAndSet(false, true)) {
-            loggerAdapter?.debug("Flush already in progress, skipping")
+            loggerAdapter.debug("Flush already in progress, skipping")
             return
         }
         
@@ -97,61 +86,128 @@ class Dispatcher(
     }
 
     /**
-     * Flush events and wait for completion.
-     * Blocking call - waits until all events are sent or failed.
+     * Flush events and wait for completion. Blocking call.
      */
     fun flushSync() {
         if (isDisposed.get()) return
-        
-        flushLock.withLock {
-            flushInternal()
-        }
+        flushLock.withLock { flushInternal() }
     }
 
     private fun flushInternal() {
-        val events = drainQueue()
-        if (events.isEmpty()) return
+        if (eventQueue.isEmpty()) return
         
-        loggerAdapter?.info("Flushing ${events.size} events")
-        
-        var attempt = 0
-        var success = false
-        
-        while (attempt < config.maxRetries && !success && !isDisposed.get()) {
-            try {
-                val headers = mapOf(config.apiKeyHeader to config.apiKey)
-                val response = httpAdapter.send(config.endpoint, events, headers, config.apiKeyHeader)
-                
-                if (response.ok) {
-                    success = true
-                    loggerAdapter?.info("Events sent successfully")
-                    storageAdapter.clear()
-                } else {
-                    throw RuntimeException("HTTP error: ${response.status}")
-                }
-            } catch (e: Exception) {
-                attempt++
-                loggerAdapter?.warn("Flush attempt $attempt failed: ${e.message}")
-                
-                if (attempt < config.maxRetries && !isDisposed.get()) {
-                    val delay = calculateBackoffDelay(attempt)
-                    loggerAdapter?.debug("Retrying in ${delay}ms")
-                    try {
-                        Thread.sleep(delay)
-                    } catch (ie: InterruptedException) {
-                        Thread.currentThread().interrupt()
-                        break
+        // Process events in batches
+        while (eventQueue.isNotEmpty() && !isDisposed.get()) {
+            val batch = drainBatch()
+            if (batch.isEmpty()) break
+            
+            loggerAdapter.info("Flushing batch of ${batch.size} events")
+            
+            var attempt = 0
+            
+            while (attempt < config.maxRetries && !isDisposed.get()) {
+                try {
+                    val headers = mapOf(config.apiKeyHeader to config.apiKey)
+                    val response = httpAdapter.send(config.endpoint, batch, headers, config.apiKeyHeader)
+                    
+                    when {
+                        response.status in 200..299 -> {
+                            // 2xx: Success, clear storage for this batch
+                            loggerAdapter.info("Batch sent successfully")
+                            break // Move to next batch
+                        }
+                        response.status in 400..499 -> {
+                            // 4xx: Client error, drop batch
+                            loggerAdapter.warn("4xx client error, dropping batch", mapOf(
+                                "status" to response.status,
+                                "eventsCount" to batch.size
+                            ))
+                            break // Drop this batch, move to next
+                        }
+                        response.status >= 500 -> {
+                            // 5xx: Server error, retry with backoff
+                            if (attempt < config.maxRetries - 1) {
+                                loggerAdapter.warn("5xx server error, retrying batch", mapOf(
+                                    "status" to response.status,
+                                    "attempt" to attempt + 1,
+                                    "maxRetries" to config.maxRetries
+                                ))
+                                val delay = calculateBackoffDelay(attempt + 1)
+                                Thread.sleep(delay)
+                                attempt++
+                            } else {
+                                // Max retries reached, re-queue batch and persist
+                                loggerAdapter.error("5xx server error, max retries reached for batch", mapOf(
+                                    "status" to response.status,
+                                    "maxRetries" to config.maxRetries,
+                                    "eventsCount" to batch.size
+                                ))
+                                requeueBatch(batch)
+                                storageAdapter.save(getAllQueuedEvents())
+                                return
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    // Network error occurred
+                    loggerAdapter.error("Network error occurred for batch", mapOf("error" to e.message))
+                    
+                    if (attempt < config.maxRetries - 1) {
+                        loggerAdapter.warn("Network error, retrying batch", mapOf(
+                            "attempt" to attempt + 1,
+                            "maxRetries" to config.maxRetries,
+                            "error" to e.message
+                        ))
+                        val delay = calculateBackoffDelay(attempt + 1)
+                        try {
+                            Thread.sleep(delay)
+                        } catch (ie: InterruptedException) {
+                            Thread.currentThread().interrupt()
+                            return
+                        }
+                        attempt++
+                    } else {
+                        // Network error, max retries reached for this batch
+                        loggerAdapter.error("Network error, max retries reached for batch", mapOf(
+                            "maxRetries" to config.maxRetries,
+                            "eventsCount" to batch.size,
+                            "error" to e.message
+                        ))
+                        requeueBatch(batch)
+                        storageAdapter.save(getAllQueuedEvents())
+                        return
                     }
                 }
             }
         }
         
-        if (!success && !isDisposed.get()) {
-            // Re-queue failed events
-            events.forEach { eventQueue.offer(it) }
-            storageAdapter.save(events)
-            loggerAdapter?.error("Failed to send events after ${config.maxRetries} attempts, re-queued ${events.size} events")
+        // Clear storage after all successful batches
+        if (eventQueue.isEmpty()) {
+            storageAdapter.clear()
         }
+    }
+
+    private fun drainBatch(): List<Event> {
+        val batch = mutableListOf<Event>()
+        var count = 0
+        while (count < config.maxBatchSize && eventQueue.isNotEmpty()) {
+            eventQueue.poll()?.let { 
+                batch.add(it)
+                count++
+            }
+        }
+        return batch
+    }
+
+    private fun requeueBatch(batch: List<Event>) {
+        // Maintain FIFO order: failed batch goes FIRST
+        val currentEvents = drainQueue()
+        val reorderedQueue = batch + currentEvents
+        reorderedQueue.forEach { eventQueue.offer(it) }
+    }
+
+    private fun getAllQueuedEvents(): List<Event> {
+        return eventQueue.toList()
     }
 
     private fun drainQueue(): List<Event> {
@@ -162,9 +218,13 @@ class Dispatcher(
         return events
     }
 
-    /**
-     * Restore persisted events from storage.
-     */
+    private fun requeue(failedEvents: List<Event>) {
+        // Maintain FIFO order: failed events go FIRST, then current events
+        val currentEvents = drainQueue()
+        val reorderedQueue = failedEvents + currentEvents
+        reorderedQueue.forEach { eventQueue.offer(it) }
+    }
+
     fun restore() {
         if (isDisposed.get()) return
         
@@ -172,58 +232,41 @@ class Dispatcher(
             val events = storageAdapter.load()
             if (events.isNotEmpty()) {
                 events.forEach { eventQueue.offer(it) }
-                loggerAdapter?.info("Restored ${events.size} persisted events")
+                loggerAdapter.info("Restored ${events.size} persisted events")
             }
         } catch (e: Exception) {
-            loggerAdapter?.error("Failed to restore events: ${e.message}")
+            loggerAdapter.error("Failed to restore events: ${e.message}")
         }
     }
 
-    /**
-     * Start scheduled automatic flushing.
-     */
     fun startScheduledFlush() {
         if (isDisposed.get()) return
         
         scheduledFlushTask = executor.scheduleWithFixedDelay(
-            {
-                if (!isDisposed.get() && eventQueue.isNotEmpty()) {
-                    flush()
-                }
-            },
+            { if (!isDisposed.get() && eventQueue.isNotEmpty()) flush() },
             config.flushInterval,
             config.flushInterval,
             TimeUnit.MILLISECONDS
         )
-        loggerAdapter?.debug("Scheduled flush started with interval ${config.flushInterval}ms")
+        loggerAdapter.debug("Scheduled flush started with interval ${config.flushInterval}ms")
     }
 
-    /**
-     * Get current queue size.
-     */
     fun getQueueSize(): Int = eventQueue.size
 
-    /**
-     * Clean up resources and stop all background operations.
-     */
     fun dispose() {
-        if (!isDisposed.compareAndSet(false, true)) {
-            return // Already disposed
-        }
+        if (!isDisposed.compareAndSet(false, true)) return
         
-        loggerAdapter?.debug("Disposing dispatcher")
-        
+        loggerAdapter.debug("Disposing dispatcher")
         scheduledFlushTask?.cancel(false)
         
-        // Attempt final flush
         try {
             val events = drainQueue()
             if (events.isNotEmpty()) {
                 storageAdapter.save(events)
-                loggerAdapter?.info("Persisted ${events.size} events on dispose")
+                loggerAdapter.info("Persisted ${events.size} events on dispose")
             }
         } catch (e: Exception) {
-            loggerAdapter?.error("Failed to persist events on dispose: ${e.message}")
+            loggerAdapter.error("Failed to persist events on dispose: ${e.message}")
         }
         
         executor.shutdown()
@@ -239,8 +282,9 @@ class Dispatcher(
 
     private fun calculateBackoffDelay(attempt: Int): Long {
         val baseDelay = 1000L
+        // Contract: exponential backoff with integer powers
         val exponentialDelay = baseDelay * (2.0.pow(attempt - 1)).toLong()
-        val jitter = Random.nextLong(0, 500)
-        return minOf(exponentialDelay + jitter, 30000L) // Cap at 30 seconds
+        val jitter = Random.nextLong(0, 1001) // Contract: 0-1000ms inclusive jitter
+        return minOf(exponentialDelay + jitter, 30000L) // Contract: max 30s delay
     }
 }

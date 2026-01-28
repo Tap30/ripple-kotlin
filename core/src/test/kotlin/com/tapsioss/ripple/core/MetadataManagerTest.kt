@@ -14,16 +14,7 @@ class MetadataManagerTest {
         
         manager.set("key1", "value1")
         
-        assertEquals("value1", manager.get("key1"))
-    }
-
-    @Test
-    fun `when getting non-existent key, then returns null`() {
-        val manager = MetadataManager()
-        
-        val result = manager.get("nonexistent")
-        
-        assertNull(result)
+        assertEquals("value1", manager.getAll()["key1"])
     }
 
     @Test
@@ -61,8 +52,6 @@ class MetadataManagerTest {
         manager.clear()
         
         assertTrue(manager.isEmpty())
-        assertNull(manager.get("key1"))
-        assertNull(manager.get("key2"))
     }
 
     @Test
@@ -72,6 +61,43 @@ class MetadataManagerTest {
         
         manager.set("key", "newValue")
         
-        assertEquals("newValue", manager.get("key"))
+        assertEquals("newValue", manager.getAll()["key"])
+    }
+    
+    @Test
+    fun `merge returns null when both empty`() {
+        val manager = MetadataManager()
+        
+        assertNull(manager.merge(null))
+        assertNull(manager.merge(emptyMap()))
+    }
+    
+    @Test
+    fun `merge returns event metadata when global empty`() {
+        val manager = MetadataManager()
+        val eventMeta = mapOf("event" to "value")
+        
+        assertEquals(eventMeta, manager.merge(eventMeta))
+    }
+    
+    @Test
+    fun `merge returns global metadata when event empty`() {
+        val manager = MetadataManager()
+        manager.set("global", "value")
+        
+        assertEquals(mapOf("global" to "value"), manager.merge(null))
+    }
+    
+    @Test
+    fun `merge combines both with event taking precedence`() {
+        val manager = MetadataManager()
+        manager.set("shared", "global")
+        manager.set("global", "only")
+        
+        val result = manager.merge(mapOf("shared" to "event", "event" to "only"))
+        
+        assertEquals("event", result?.get("shared"))
+        assertEquals("only", result?.get("global"))
+        assertEquals("only", result?.get("event"))
     }
 }

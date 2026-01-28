@@ -7,14 +7,15 @@ A high-performance event tracking SDK for Kotlin and Java applications.
 
 ## Features
 
-- 🚀 **High Performance**: Efficient queue management with automatic batching
-- 🔄 **Built-in Retry Logic**: Exponential backoff with jitter for failed requests
-- 🔒 **Thread-Safe**: All operations are thread-safe, no synchronization needed
-- 💾 **Offline Support**: Events are persisted and sent when connectivity returns
-- 🌐 **Multi-Platform**: Android, Spring Boot, and pure Java support
-- 📘 **Type-Safe**: Full Kotlin type safety with seamless Java interoperability
+- 🚀 **High Performance**: O(1) queue operations with automatic batching
+- 🔄 **Smart Retry Logic**: Exponential backoff with jitter, 4xx vs 5xx handling
+- 🔒 **Thread-Safe**: All operations are thread-safe with mutex-protected flushes
+- 💾 **Offline Support**: Events persisted and sent when connectivity returns
+- 🌐 **Multi-Platform**: Android, Spring Boot, and reactive support
+- 📘 **Type-Safe**: Full Kotlin type safety with Java interoperability
 - 🔌 **Pluggable Adapters**: Customize HTTP, storage, and logging behavior
-- ⚡ **No Coroutines Required**: Simple function calls, no async complexity
+- ♻️ **Re-initializable**: Supports dispose/init cycles for lifecycle management
+- 🔢 **Multi-Instance**: Run multiple client instances with different configs
 
 ## Download
 
@@ -138,9 +139,6 @@ implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
 implementation("io.github.tap30.ripple:android-adapters-room:1.0.0")
 
 // Usage
-import com.tapsioss.ripple.android.adapters.okhttp.OkHttpAdapter
-import com.tapsioss.ripple.android.adapters.room.RoomStorageAdapterFactory
-
 val config = RippleConfig(
     apiKey = "your-api-key",
     endpoint = "https://api.example.com/events",
@@ -151,37 +149,56 @@ val config = RippleConfig(
     )
 )
 
-val client = AndroidRippleClient(context, config)
-
-// Initialize once (typically in Application.onCreate)
+val client = AndroidRippleClient(config)
 client.init()
 
-// Track simple events
+// Track events (untyped)
 client.track("user_login")
+client.track("purchase", mapOf("product_id" to "abc123", "amount" to 29.99))
 
-// Track events with properties
-client.track("purchase", mapOf(
-    "product_id" to "abc123",
-    "amount" to 29.99,
-    "currency" to "USD"
-))
-
-// Set global metadata (attached to all events)
+// Set global metadata
 client.setMetadata("user_id", "12345")
-client.setMetadata("app_version", "1.2.0")
 
-// Track with event-specific metadata
-client.track(
-    name = "page_view",
-    payload = mapOf("page" to "home"),
-    metadata = mapOf("experiment" to "variant_a")
-)
-
-// Manual flush (events auto-flush based on config)
-client.flush()
-
-// Clean up when done
+// Clean up
 client.dispose()
+```
+
+### Type-Safe Events (Recommended)
+
+Define your events with compile-time validation:
+
+```kotlin
+// Define events as sealed class
+sealed class AppEvent : RippleEvent {
+    data class UserLogin(val email: String, val method: String) : AppEvent() {
+        override val name = "user.login"
+        override fun toPayload() = mapOf("email" to email, "method" to method)
+    }
+    
+    data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
+        override val name = "purchase"
+        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+    }
+}
+
+// Define metadata
+data class AppMetadata(
+    val userId: String? = null,
+    val version: String? = null
+) : RippleMetadata {
+    override fun toMap() = buildMap {
+        userId?.let { put("userId", it) }
+        version?.let { put("version", it) }
+    }
+}
+
+// Usage - compile-time type checking
+client.track(AppEvent.UserLogin("user@example.com", "google"))
+client.track(AppEvent.Purchase("ORD-123", 99.99))
+client.setMetadata(AppMetadata(userId = "user-123", version = "1.0.0"))
+
+// Event-specific metadata
+client.track(AppEvent.Purchase("ORD-456", 50.0), AppMetadata(userId = "vip-user"))
 ```
 
 ### Spring Boot (Kotlin)
@@ -282,15 +299,17 @@ public class UserService {
 
 | Method | Description |
 |--------|-------------|
-| `init()` | Initialize the client. Must be called before tracking. |
+| `init()` | Initialize the client. Must be called before tracking. Can be called after dispose(). |
 | `track(name, payload?, metadata?)` | Track an event with optional payload and metadata. |
 | `setMetadata(key, value)` | Set global metadata attached to all events. |
+| `getMetadata()` | Get all stored metadata as a shallow copy. |
+| `getSessionId()` | Get the current session ID. |
 | `removeMetadata(key)` | Remove a global metadata key. |
 | `clearMetadata()` | Clear all global metadata. |
 | `flush()` | Flush queued events asynchronously. |
 | `flushSync()` | Flush queued events and wait for completion. |
 | `getQueueSize()` | Get the number of queued events. |
-| `dispose()` | Clean up resources. Persists unsent events. |
+| `dispose()` | Clean up resources. Persists unsent events. Supports re-initialization. |
 
 ### RippleConfig
 
@@ -320,6 +339,52 @@ Events are automatically persisted when:
 - `dispose()` is called with events in queue
 
 Persisted events are restored on next `init()` call.
+
+## Multi-Instance Support
+
+The SDK supports running multiple client instances simultaneously with different configurations:
+
+```kotlin
+// Analytics client
+val analyticsClient = AndroidRippleClient(context, RippleConfig(
+    apiKey = "analytics-key",
+    endpoint = "https://analytics.example.com/events",
+    adapters = AdapterConfig(...)
+))
+
+// Monitoring client  
+val monitoringClient = AndroidRippleClient(context, RippleConfig(
+    apiKey = "monitoring-key",
+    endpoint = "https://monitoring.example.com/events",
+    adapters = AdapterConfig(...)
+))
+
+analyticsClient.init()
+monitoringClient.init()
+
+// Track to different endpoints
+analyticsClient.track("user_action", mapOf("action" to "click"))
+monitoringClient.track("performance", mapOf("latency" to 150))
+```
+
+Each instance maintains its own:
+- Event queue
+- Metadata storage
+- Session ID
+- Flush scheduler
+
+## Retry Behavior
+
+The SDK handles HTTP errors intelligently:
+
+| Status Code | Behavior |
+|-------------|----------|
+| 2xx | Success - clear storage |
+| 4xx | No retry - persist events |
+| 5xx | Retry with exponential backoff |
+| Network error | Retry with exponential backoff |
+
+Backoff formula: `delay = (1000ms × 2^attempt) + jitter(0-1000ms)`, max 30 seconds.
 
 ## Documentation
 

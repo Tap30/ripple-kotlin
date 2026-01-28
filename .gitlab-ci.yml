@@ -1,0 +1,25 @@
+stages:
+  - build
+  - publish
+
+
+variables:
+  ANDROID_HOME: "/home/gitlab-runner/Android/Sdk"
+  JAVA_HOME: "/usr/lib/jvm/java-17-openjdk-amd64"
+before_script:
+    - export GRADLE_USER_HOME=`pwd`/.gradle
+    - export PATH="$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH"
+    - mkdir -p $GRADLE_USER_HOME
+    - chmod +x ./gradlew
+    - touch `pwd`/.gradle/gradle.properties
+    - echo -e "systemProp.gradle.wrapperUser=${ARTIFACTORY_ANDROID_USERNAME}\nsystemProp.gradle.wrapperPassword=${ARTIFACTORY_ANDROID_PASSWORD}" >> `pwd`/.gradle/gradle.properties
+
+publish artifactory:
+  tags:
+    - android-release
+  stage: publish
+  script:
+    - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
+  only:
+    - merge_requests
+    - tags
