@@ -100,52 +100,82 @@ class Dispatcher(
         loggerAdapter.info("Flushing ${events.size} events")
         
         var attempt = 0
-        var success = false
-        var shouldRetry = true
         
-        while (attempt < config.maxRetries && !success && shouldRetry && !isDisposed.get()) {
+        while (attempt < config.maxRetries && !isDisposed.get()) {
             try {
                 val headers = mapOf(config.apiKeyHeader to config.apiKey)
                 val response = httpAdapter.send(config.endpoint, events, headers, config.apiKeyHeader)
                 
                 when {
-                    response.ok -> {
-                        success = true
-                        loggerAdapter.info("Events sent successfully")
+                    response.status in 200..299 -> {
+                        // 2xx: Success, clear storage
                         storageAdapter.clear()
+                        loggerAdapter.info("Events sent successfully")
+                        return
                     }
                     response.status in 400..499 -> {
-                        // 4xx Client Error - Don't retry, persist events
-                        shouldRetry = false
-                        loggerAdapter.warn("Client error ${response.status}, not retrying")
+                        // 4xx: Client error, drop events (they won't succeed without client-side fix)
+                        loggerAdapter.warn("4xx client error, dropping events", mapOf(
+                            "status" to response.status,
+                            "eventsCount" to events.size
+                        ))
+                        storageAdapter.clear()
+                        return
                     }
-                    else -> {
-                        // 5xx Server Error - Retry
-                        throw RuntimeException("Server error: ${response.status}")
+                    response.status >= 500 -> {
+                        // 5xx: Server error, retry with backoff
+                        if (attempt < config.maxRetries - 1) {
+                            loggerAdapter.warn("5xx server error, retrying", mapOf(
+                                "status" to response.status,
+                                "attempt" to attempt + 1,
+                                "maxRetries" to config.maxRetries
+                            ))
+                            val delay = calculateBackoffDelay(attempt + 1)
+                            Thread.sleep(delay)
+                            attempt++
+                        } else {
+                            // Max retries reached, re-queue and persist
+                            loggerAdapter.error("5xx server error, max retries reached", mapOf(
+                                "status" to response.status,
+                                "maxRetries" to config.maxRetries,
+                                "eventsCount" to events.size
+                            ))
+                            requeue(events)
+                            storageAdapter.save(events)
+                            return
+                        }
                     }
                 }
             } catch (e: Exception) {
-                attempt++
-                loggerAdapter.warn("Flush attempt $attempt failed: ${e.message}")
+                // Network error occurred
+                loggerAdapter.error("Network error occurred", mapOf("error" to e.message))
                 
-                if (attempt < config.maxRetries && shouldRetry && !isDisposed.get()) {
-                    val delay = calculateBackoffDelay(attempt)
-                    loggerAdapter.debug("Retrying in ${delay}ms")
+                if (attempt < config.maxRetries - 1) {
+                    loggerAdapter.warn("Network error, retrying", mapOf(
+                        "attempt" to attempt + 1,
+                        "maxRetries" to config.maxRetries,
+                        "error" to e.message
+                    ))
+                    val delay = calculateBackoffDelay(attempt + 1)
                     try {
                         Thread.sleep(delay)
                     } catch (ie: InterruptedException) {
                         Thread.currentThread().interrupt()
                         break
                     }
+                    attempt++
+                } else {
+                    // Network error, max retries reached
+                    loggerAdapter.error("Network error, max retries reached", mapOf(
+                        "maxRetries" to config.maxRetries,
+                        "eventsCount" to events.size,
+                        "error" to e.message
+                    ))
+                    requeue(events)
+                    storageAdapter.save(events)
+                    return
                 }
             }
-        }
-        
-        if (!success && !isDisposed.get()) {
-            // Re-queue failed events at the FRONT to maintain FIFO order
-            requeue(events)
-            storageAdapter.save(events)
-            loggerAdapter.error("Failed to send events, re-queued ${events.size} events")
         }
     }
 
@@ -158,10 +188,10 @@ class Dispatcher(
     }
 
     private fun requeue(failedEvents: List<Event>) {
-        // Drain current queue, prepend failed events, re-add all
+        // Maintain FIFO order: failed events go FIRST, then current events
         val currentEvents = drainQueue()
-        failedEvents.forEach { eventQueue.offer(it) }
-        currentEvents.forEach { eventQueue.offer(it) }
+        val reorderedQueue = failedEvents + currentEvents
+        reorderedQueue.forEach { eventQueue.offer(it) }
     }
 
     fun restore() {
@@ -221,8 +251,9 @@ class Dispatcher(
 
     private fun calculateBackoffDelay(attempt: Int): Long {
         val baseDelay = 1000L
+        // Contract: exponential backoff with integer powers
         val exponentialDelay = baseDelay * (2.0.pow(attempt - 1)).toLong()
-        val jitter = Random.nextLong(0, 1000) // Contract: 0-1000ms jitter
-        return minOf(exponentialDelay + jitter, 30000L)
+        val jitter = Random.nextLong(0, 1001) // Contract: 0-1000ms inclusive jitter
+        return minOf(exponentialDelay + jitter, 30000L) // Contract: max 30s delay
     }
 }
