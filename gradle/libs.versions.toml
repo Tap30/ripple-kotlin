@@ -1,7 +1,7 @@
 [versions]
 junit-version = "1.2.1"
 kotlin = "2.3.0"
-ksp = "2.3.0"
+ksp = "2.3.4"
 android-gradle = "8.13.2"
 room = "2.7.1"
 slf4j-api = "2.0.17"
