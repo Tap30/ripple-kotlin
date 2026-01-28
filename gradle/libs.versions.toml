@@ -2,7 +2,7 @@
 junit-version = "1.2.1"
 kotlin = "2.3.0"
 ksp = "2.3.0"
-android-gradle = "8.13.2"
+android-gradle = "9.0.0"
 room = "2.7.1"
 slf4j-api = "2.0.17"
 spring-boot = "3.5.9"
