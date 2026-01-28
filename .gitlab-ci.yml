@@ -14,30 +14,6 @@ before_script:
     - touch `pwd`/.gradle/gradle.properties
     - echo -e "systemProp.gradle.wrapperUser=${ARTIFACTORY_ANDROID_USERNAME}\nsystemProp.gradle.wrapperPassword=${ARTIFACTORY_ANDROID_PASSWORD}" >> `pwd`/.gradle/gradle.properties
 
-
-cache:
-  paths:
-    - .gradle/wrapper
-    - .gradle/caches
-
-#build:
-#  tags:
-#    - android-release
-#  stage: build
-#  script:
-#    - ./gradlew build --no-daemon
-##  artifacts:
-##    reports:
-##      junit: "**/build/test-results/test/TEST-*.xml"
-##    paths:
-##      - "**/build/libs/*.jar"
-##    expire_in: 1 hour
-#  only:
-##    - main
-##    - develop
-#    - merge_requests
-##    - tags
-
 publish artifactory:
   tags:
     - android-release
@@ -46,4 +22,4 @@ publish artifactory:
     - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
   only:
     - merge_requests
-#    - tags
+    - tags
