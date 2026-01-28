@@ -74,7 +74,7 @@ class RippleClientTest {
         assertNotNull(client.getSessionId())
         assertTrue(client.getSessionId()!!.contains("-"))
     }
-    
+
     // ==================== TYPED TRACK ====================
     
     @Test

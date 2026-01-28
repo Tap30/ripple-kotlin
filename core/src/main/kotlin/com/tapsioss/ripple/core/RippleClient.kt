@@ -61,6 +61,7 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
             dispatcher = createDispatcher()
             dispatcher?.restore()
             dispatcher?.startScheduledFlush()
+
             isInitialized = true
             config.adapters.loggerAdapter?.info("RippleClient initialized")
         }
