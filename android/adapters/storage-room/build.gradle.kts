@@ -1,3 +1,4 @@
+import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -33,17 +34,17 @@ android {
     publishing {
         singleVariant("release") {
             withSourcesJar()
-            withJavadocJar()
+//            withJavadocJar()
         }
     }
     
-    // Configure JAR name to match artifactId
-    libraryVariants.all {
-        outputs.all {
-            (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = 
-                "android-adapters-room-${project.version}.aar"
-        }
-    }
+//    // Configure JAR name to match artifactId
+//    libraryVariants.all {
+//        outputs.all {
+//            (this as BaseVariantOutputImpl).outputFileName =
+//                "android-adapters-storage-room-${project.version}.aar"
+//        }
+//    }
 }
 
 // Configure artifact name for Android module
@@ -51,14 +52,14 @@ afterEvaluate {
     publishing {
         publications {
             named<MavenPublication>("maven") {
-                artifactId = "android-adapters-room"
+                artifactId = "android-adapters-storage-room"
             }
         }
     }
 }
 
 dependencies {
-    implementation(project(":core"))
+    api(project(":core"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.core)
     

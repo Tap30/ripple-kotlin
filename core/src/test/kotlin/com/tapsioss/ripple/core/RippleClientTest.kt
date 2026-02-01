@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class RippleClientTest {
@@ -26,7 +27,7 @@ class RippleClientTest {
         storageAdapter = mockk(relaxed = true)
         loggerAdapter = mockk(relaxed = true)
         
-        every { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(ok = true, status = 200, data = null)
+        every { httpAdapter.send(any(), any(), any(), any()) } returns HttpResponse(ok = true, status = 200)
         every { storageAdapter.load() } returns emptyList()
         
         config = RippleConfig(
@@ -44,100 +45,181 @@ class RippleClientTest {
     
     @AfterEach
     fun tearDown() {
-        if (::client.isInitialized) {
-            client.dispose()
-        }
+        try { client.dispose() } catch (_: Exception) {}
+    }
+    
+    // ==================== INITIALIZATION ====================
+    
+    @Test
+    fun `track throws when not initialized`() {
+        assertThrows<IllegalStateException> { client.track("test_event") }
     }
     
     @Test
-    fun `when client is not initialized, then track throws exception`() {
-        assertThrows<IllegalStateException> {
-            client.track("test_event")
-        }
-    }
-    
-    @Test
-    fun `when client is initialized, then track succeeds`() {
+    fun `init is idempotent`() {
         client.init()
-        
+        val sessionId = client.getSessionId()
+        client.init()
+        assertEquals(sessionId, client.getSessionId())
+    }
+    
+    @Test
+    fun `getSessionId returns null before init`() {
+        assertNull(client.getSessionId())
+    }
+    
+    @Test
+    fun `getSessionId returns value after init`() {
+        client.init()
+        assertNotNull(client.getSessionId())
+        assertTrue(client.getSessionId()!!.contains("-"))
+    }
+
+    // ==================== TYPED TRACK ====================
+    
+    @Test
+    fun `track with typed event`() {
+        client.init()
+        client.track(TestEvent.Login("test@example.com"))
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `track with typed event and typed metadata`() {
+        client.init()
+        client.track(TestEvent.Login("test@example.com"), TestMetadata("user-123"))
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `track with typed event and untyped metadata`() {
+        client.init()
+        client.track(TestEvent.Login("test@example.com"), mapOf("key" to "value"))
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    // ==================== UNTYPED TRACK ====================
+    
+    @Test
+    fun `track with name only`() {
+        client.init()
         client.track("test_event")
-        
         assertEquals(1, client.getQueueSize())
     }
     
     @Test
-    fun `when tracking with payload, then event contains payload`() {
+    fun `track with name and payload`() {
         client.init()
-        val payload = mapOf("key" to "value")
-        
-        client.track("test_event", payload)
-        
+        client.track("test_event", mapOf("key" to "value"))
         assertEquals(1, client.getQueueSize())
     }
     
     @Test
-    fun `when setting metadata, then metadata is included in events`() {
+    fun `track with name payload and metadata`() {
         client.init()
+        client.track("test_event", mapOf("key" to "value"), mapOf("meta" to "data"))
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    @Test
+    fun `track untyped with typed metadata`() {
+        client.init()
+        client.track("test_event", mapOf("key" to "value"), TestMetadata("user-123"))
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    // ==================== METADATA ====================
+    
+    @Test
+    fun `setMetadata with key value`() {
         client.setMetadata("user_id", "12345")
-        
-        client.track("test_event")
-        
-        assertEquals(1, client.getQueueSize())
+        assertEquals("12345", client.getMetadata()["user_id"])
     }
     
     @Test
-    fun `when flush is called, then events are sent`() {
+    fun `setMetadata with typed metadata`() {
+        client.setMetadata(TestMetadata("user-123"))
+        assertEquals("user-123", client.getMetadata()["userId"])
+    }
+    
+    @Test
+    fun `clearMetadata removes all`() {
+        client.setMetadata("key", "value")
+        client.clearMetadata()
+        assertTrue(client.getMetadata().isEmpty())
+    }
+    
+    @Test
+    fun `removeMetadata removes single key`() {
+        client.setMetadata("key1", "value1")
+        client.setMetadata("key2", "value2")
+        client.removeMetadata("key1")
+        assertNull(client.getMetadata()["key1"])
+        assertEquals("value2", client.getMetadata()["key2"])
+    }
+    
+    // ==================== FACTORY METHOD ====================
+    
+    @Test
+    fun `create factory method works`() {
+        val untypedClient = RippleClient.create(config)
+        untypedClient.init()
+        untypedClient.track("test_event", mapOf("key" to "value"))
+        assertEquals(1, untypedClient.getQueueSize())
+    }
+    
+    // ==================== FLUSH ====================
+    
+    @Test
+    fun `flush sends events`() {
         client.init()
         client.track("test_event")
-        
         client.flushSync()
-        
         verify { httpAdapter.send(any(), any(), any(), any()) }
     }
     
+    // ==================== DISPOSE ====================
+    
     @Test
-    fun `when dispose is called, then client cannot track events`() {
+    fun `dispose clears state`() {
         client.init()
+        client.setMetadata("key", "value")
         client.dispose()
         
-        // After dispose, track should throw since client is not initialized
-        assertThrows<IllegalStateException> {
-            client.track("test_event")
+        assertTrue(client.getMetadata().isEmpty())
+        assertNull(client.getSessionId())
+    }
+    
+    @Test
+    fun `dispose prevents tracking`() {
+        client.init()
+        client.dispose()
+        assertThrows<IllegalStateException> { client.track("test_event") }
+    }
+    
+    @Test
+    fun `init after dispose works`() {
+        client.init()
+        client.dispose()
+        client.init()
+        client.track("test_event")
+        assertEquals(1, client.getQueueSize())
+    }
+    
+    // ==================== TEST HELPERS ====================
+    
+    private class TestRippleClient(config: RippleConfig) : RippleClient<TestEvent, TestMetadata>(config) {
+        override fun getPlatform(): Platform = Platform.Server
+    }
+    
+    sealed class TestEvent : RippleEvent {
+        data class Login(val email: String) : TestEvent() {
+            override val name = "user.login"
+            override fun toPayload() = mapOf("email" to email)
         }
     }
     
-    @Test
-    fun `when init is called multiple times, then it is idempotent`() {
-        client.init()
-        client.init()
-        client.init()
-        
-        // Should not throw
-        client.track("test_event")
-        assertEquals(1, client.getQueueSize())
-    }
-    
-    @Test
-    fun `when metadata is cleared, then events have no global metadata`() {
-        client.init()
-        client.setMetadata("key", "value")
-        client.clearMetadata()
-        
-        client.track("test_event")
-        
-        assertEquals(1, client.getQueueSize())
-    }
-    
-    /**
-     * Test implementation of RippleClient
-     */
-    private class TestRippleClient(config: RippleConfig) : RippleClient(config) {
-        override fun getSessionId(): String = "test-session-id"
-        override fun getPlatform(): Platform = Platform(
-            os = "Test",
-            osVersion = "1.0",
-            device = "TestDevice",
-            manufacturer = "TestManufacturer"
-        )
+    data class TestMetadata(val userId: String) : RippleMetadata {
+        override fun toMap() = mapOf("userId" to userId)
     }
 }

@@ -5,7 +5,7 @@
     <application
         android:allowBackup="true"
         android:label="Ripple Sample"
-        android:theme="@style/Theme.AppCompat">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar">
         <activity
             android:name=".MainActivity"
             android:exported="true">

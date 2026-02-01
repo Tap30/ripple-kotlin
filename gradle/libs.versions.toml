@@ -1,4 +1,5 @@
 [versions]
+junit-version = "1.2.1"
 kotlin = "2.3.0"
 ksp = "2.3.0"
 android-gradle = "8.13.2"
@@ -16,8 +17,13 @@ lifecycle = "2.10.0"
 appcompat = "1.7.1"
 reactor = "3.8.1"
 jackson-module-kotlin = "2.20.1"
+androidx-test = "1.6.1"
+espresso = "3.6.1"
+compose-bom = "2025.05.00"
+activity-compose = "1.10.1"
 
 [libraries]
+androidx-junit = { module = "androidx.test.ext:junit", version.ref = "junit-version" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
@@ -45,6 +51,17 @@ slf4j-api = { group = "org.slf4j", name = "slf4j-api" }
 
 reactor-core = { group = "io.projectreactor", name = "reactor-core", version.ref = "reactor" }
 
+androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidx-test" }
+androidx-test-rules = { group = "androidx.test", name = "rules", version.ref = "androidx-test" }
+androidx-test-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espresso" }
+
+androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
+androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }
+androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
+androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
+androidx-compose-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit4" }
+androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest" }
+
 # Gradle plugins
 kotlin-gradle-plugin = { group = "org.jetbrains.kotlin", name = "kotlin-gradle-plugin", version.ref = "kotlin" }
 android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", version.ref = "android-gradle" }
@@ -52,6 +69,7 @@ android-gradle-plugin = { group = "com.android.tools.build", name = "gradle", ve
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 android-application = { id = "com.android.application", version.ref = "android-gradle" }

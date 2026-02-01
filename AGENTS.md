@@ -8,23 +8,28 @@ The SDK follows a modular architecture with maximum code sharing and platform-sp
 
 ```
 ripple-kotlin/
-├── core/                    # Shared core logic (thread-safe, coroutine-based)
+├── core/                    # Shared core logic (thread-safe, coroutine-free)
 │   ├── RippleClient         # Abstract client with lifecycle management
+│   ├── RippleEvent          # Interface for type-safe events
+│   ├── RippleMetadata       # Interface for type-safe metadata
 │   ├── Dispatcher           # Queue management, batching, retry logic
 │   ├── MetadataManager      # Thread-safe metadata handling
+│   ├── Platform             # Sealed class for platform types
 │   └── adapters/            # Pluggable adapter interfaces
 ├── android/                 # Android-specific implementation
-│   ├── AndroidRippleClient  # Android client with session management
-│   └── adapters/            # OkHttp, SharedPreferences, Android Log
+│   ├── android-core/        # AndroidRippleClient
+│   └── adapters/            # OkHttp, Room, SharedPreferences, Android Log
 ├── spring/                  # Spring Boot integration
-│   ├── SpringRippleClient   # Spring client for server applications
+│   ├── spring-core/         # SpringRippleClient
 │   └── adapters/            # WebClient, File storage, SLF4J
 ├── reactive/                # Reactive streams support
-│   └── ReactiveRippleClient # Kotlin Flow and Project Reactor support
+│   ├── reactive-core/       # ReactiveRippleClient
+│   └── adapters/            # Reactor support
 └── samples/                 # Example implementations
-    ├── android-sample/      # Android app example
+    ├── android-sample/      # Android app with E2E tests
     ├── spring-sample/       # Spring Boot example
-    └── spring-java-sample/  # Java Spring Boot example
+    ├── spring-java-sample/  # Java Spring Boot example
+    └── test-server/         # Local Ktor server for E2E testing
 ```
 
 ## Core Features
@@ -36,498 +41,335 @@ ripple-kotlin/
 - **Background Processing**: Dedicated thread pool for HTTP operations
 
 ### 🔄 Fault Tolerance
-- **Exponential Backoff**: Retry failed requests with jitter (max 30s delay)
+- **Exponential Backoff**: Retry with jitter (0-1000ms), max 30s delay
+- **Smart Retry Logic**: 5xx errors retry, 4xx errors don't retry
 - **Offline Persistence**: Events saved to storage when network fails
-- **Graceful Degradation**: Continues queuing events during outages
-- **Automatic Recovery**: Restores persisted events on next initialization
+- **FIFO Order Maintained**: Failed events prepended to queue
 
 ### 🔒 Thread Safety
-- **Coroutine-based**: All async operations use Kotlin coroutines
-- **Concurrent Collections**: Thread-safe data structures throughout
-- **Atomic Operations**: Lock-free operations where possible
-- **Synchronized Blocks**: Minimal locking for initialization/disposal
+- **Mutex-protected Flushes**: Only one flush operation at a time
+- **Concurrent Collections**: ConcurrentLinkedQueue, ConcurrentHashMap
+- **Atomic Operations**: AtomicBoolean for state management
+- **Synchronized Initialization**: Double-checked locking pattern
 
 ### 📦 Pluggable Architecture
-- **HTTP Adapters**: OkHttp (Android), WebClient (Spring), custom implementations
-- **Storage Adapters**: SharedPreferences, File system, database, custom
-- **Logger Adapters**: Android Log, SLF4J, custom logging frameworks
+- **HTTP Adapters**: OkHttp (Android), WebClient (Spring), custom
+- **Storage Adapters**: SharedPreferences, Room, File system, custom
+- **Logger Adapters**: Android Log, SLF4J, Console, NoOp
+
+## Type-Safe API
+
+### RippleEvent Interface
+
+Define type-safe events with compile-time validation:
+
+```kotlin
+interface RippleEvent {
+    val name: String
+    fun toPayload(): Map<String, Any>?
+}
+
+// User implementation
+sealed class AppEvent : RippleEvent {
+    data class UserLogin(val email: String, val method: String) : AppEvent() {
+        override val name = "user.login"
+        override fun toPayload() = mapOf("email" to email, "method" to method)
+    }
+    
+    data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
+        override val name = "purchase"
+        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+    }
+}
+
+// Type-safe tracking
+client.track(AppEvent.UserLogin("user@example.com", "google"))
+```
+
+### RippleMetadata Interface
+
+Define type-safe metadata:
+
+```kotlin
+interface RippleMetadata {
+    fun toMap(): Map<String, Any>
+}
+
+// User implementation
+data class AppMetadata(
+    val userId: String? = null,
+    val version: String? = null
+) : RippleMetadata {
+    override fun toMap() = buildMap {
+        userId?.let { put("userId", it) }
+        version?.let { put("version", it) }
+    }
+}
+
+// Type-safe metadata
+client.setMetadata(AppMetadata(userId = "123", version = "1.0.0"))
+client.track(event, AppMetadata(userId = "vip-user"))
+```
+
+### Track Method Overloads
+
+```kotlin
+// Type-safe event
+fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
+fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+
+// Untyped event
+fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
+fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
+```
 
 ## Core Module
 
 ### RippleClient (Abstract Base)
 
-The foundation class providing lifecycle management and event tracking:
-
 ```kotlin
 abstract class RippleClient(protected val config: RippleConfig) {
-    // Lifecycle methods
-    fun init()                                    // Initialize client, restore events
-    fun dispose()                                 // Clean shutdown, persist events
+    // Lifecycle
+    fun init()                                    // Initialize, restore events, start scheduler
+    fun dispose()                                 // Clean shutdown, persist events, supports re-init
     
-    // Event tracking
-    fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
+    // Type-safe event tracking
+    fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
+    fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+    
+    // Untyped event tracking
+    fun track(name: String, payload: Map<String, Any>?, metadata: Map<String, Any>?)
+    fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
     
     // Metadata management
-    fun setMetadata(key: String, value: Any)      // Global metadata for all events
+    fun setMetadata(metadata: RippleMetadata)     // Type-safe
+    fun setMetadata(key: String, value: Any)      // Untyped
+    fun getMetadata(): Map<String, Any>
     fun removeMetadata(key: String)
     fun clearMetadata()
     
-    // Manual flushing
-    fun flush()                                   // Non-blocking flush
-    fun flushSync()                              // Blocking flush
-    fun getQueueSize(): Int                      // Current queue size
+    // Session
+    fun getSessionId(): String?                   // Format: {timestamp}-{random}
     
-    // Platform-specific implementations
-    protected abstract fun getSessionId(): String?
+    // Flushing
+    fun flush()                                   // Non-blocking
+    fun flushSync()                              // Blocking
+    fun getQueueSize(): Int
+    
+    // Platform-specific
     protected abstract fun getPlatform(): Platform?
 }
 ```
 
 **Key Implementation Details:**
-- **Initialization**: Idempotent, thread-safe, restores persisted events
-- **Event Creation**: Automatic timestamp, session ID, platform detection
-- **Metadata Merging**: Global + event-specific metadata (event takes precedence)
-- **Error Handling**: IllegalStateException if not initialized
+- Dispatcher is recreated on each `init()` call (supports re-initialization)
+- Session ID generated on `init()`, cleared on `dispose()`
+- Default logger is `ConsoleLoggerAdapter` with WARN level
+- Session ID format: `{timestamp}-{random}` (e.g., `1704567890123-456789`)
 
 ### Dispatcher (Queue Management)
 
-Handles event queuing, batching, and HTTP delivery with retry logic:
+**Retry Logic:**
+- 2xx: Success, clear storage
+- 4xx: No retry, persist events immediately
+- 5xx: Retry with exponential backoff
+- Network error: Retry with exponential backoff
+
+**Backoff Formula:**
+```
+delay = (1000ms × 2^attempt) + jitter(0-1000ms)
+max delay = 30 seconds
+```
+
+**FIFO Ordering:**
+Failed events are prepended to queue, not appended.
+
+### Platform (Sealed Class)
 
 ```kotlin
-class Dispatcher(
-    private val config: DispatcherConfig,
-    private val httpAdapter: HttpAdapter,
-    private val storageAdapter: StorageAdapter,
-    private val loggerAdapter: LoggerAdapter?
-) {
-    // Queue operations
-    fun enqueue(event: Event)                    // Add event to queue
-    fun flush()                                  // Non-blocking flush
-    fun flushSync()                             // Blocking flush
+sealed class Platform {
+    abstract val type: String
     
-    // Lifecycle
-    fun restore()                               // Restore persisted events
-    fun startScheduledFlush()                   // Start auto-flush timer
-    fun dispose()                               // Clean shutdown
+    data class Web(
+        val browser: DeviceInfo,
+        val device: DeviceInfo,
+        val os: DeviceInfo
+    ) : Platform()  // type = "web"
     
-    fun getQueueSize(): Int                     // Current queue size
+    data class Native(
+        val device: DeviceInfo,
+        val os: DeviceInfo
+    ) : Platform()  // type = "native"
+    
+    data object Server : Platform()  // type = "server"
 }
+
+data class DeviceInfo(val name: String, val version: String)
 ```
 
-**Implementation Details:**
-- **Queue**: ConcurrentLinkedQueue for thread-safe operations
-- **Batching**: Automatic flush when maxBatchSize reached
-- **Retry Logic**: Exponential backoff with jitter (1s → 2s → 4s → ... max 30s)
-- **Concurrency**: ReentrantLock prevents concurrent flushes
-- **Scheduled Flush**: ScheduledExecutorService for periodic flushing
-- **Error Recovery**: Failed events re-queued and persisted
-
-### MetadataManager (Thread-safe Storage)
-
-Manages global metadata attached to all events:
+### Built-in Loggers
 
 ```kotlin
-class MetadataManager {
-    fun set(key: String, value: Any)            // Set metadata value
-    fun remove(key: String)                     // Remove metadata key
-    fun clear()                                 // Clear all metadata
-    fun getAll(): Map<String, Any>              // Get all metadata (copy)
-}
-```
-
-**Implementation**: ConcurrentHashMap for thread-safe operations
-
-### Adapter Interfaces
-
-#### HttpAdapter
-```kotlin
-interface HttpAdapter {
-    fun send(
-        endpoint: String,
-        events: List<Event>,
-        headers: Map<String, String>,
-        apiKeyHeader: String
-    ): HttpResponse
-}
-```
-
-#### StorageAdapter
-```kotlin
-interface StorageAdapter {
-    fun save(events: List<Event>)               // Persist events
-    fun load(): List<Event>                     // Load persisted events
-    fun clear()                                 // Clear storage
-}
-```
-
-#### LoggerAdapter
-```kotlin
-interface LoggerAdapter {
-    fun debug(message: String, vararg args: Any?)
-    fun info(message: String, vararg args: Any?)
-    fun warn(message: String, vararg args: Any?)
-    fun error(message: String, vararg args: Any?)
-}
+class ConsoleLoggerAdapter(level: LogLevel = LogLevel.WARN) : LoggerAdapter
+class NoOpLoggerAdapter : LoggerAdapter
 ```
 
 ## Platform Modules
 
 ### Android Module
 
-**AndroidRippleClient**: Android-optimized implementation with lifecycle awareness
-
 ```kotlin
-class AndroidRippleClient(
-    private val context: Context,
-    config: RippleConfig
-) : RippleClient(config)
-```
-
-**Key Features:**
-- **Session Management**: UUID-based session tracking
-- **Platform Detection**: Automatic Android device info (OS, version, model, manufacturer)
-- **Context Integration**: Uses Android Context for storage and system info
-
-**Adapters:**
-- **OkHttpAdapter**: HTTP client with 30s timeouts, JSON serialization
-- **SharedPreferencesAdapter**: Persistent storage using Android SharedPreferences
-- **AndroidLogAdapter**: Logging via Android Log with configurable levels
-
-### Spring Module
-
-**SpringRippleClient**: Spring Boot integration for server applications
-
-```kotlin
-class SpringRippleClient(config: RippleConfig) : RippleClient(config)
-```
-
-**Key Features:**
-- **Bean Integration**: Designed as singleton Spring bean
-- **Server Platform**: JVM system properties for platform detection
-- **Thread Safety**: Safe for concurrent use in web applications
-
-**Adapters:**
-- **WebClientAdapter**: Reactive HTTP client using Spring WebFlux
-- **FileStorageAdapter**: File system persistence for event storage
-- **Slf4jLoggerAdapter**: Integration with SLF4J logging framework
-
-### Reactive Module
-
-**ReactiveRippleClient**: Reactive streams support with Kotlin Flow and Project Reactor
-
-```kotlin
-class ReactiveRippleClient(config: RippleConfig) : RippleClient(config) {
-    suspend fun trackReactive(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
-    fun getEventFlow(): Flow<Event>             // Kotlin Flow stream
-    fun getEventFlux(): Flux<Event>             // Project Reactor stream
+class AndroidRippleClient(config: RippleConfig) : RippleClient(config) {
+    override fun getPlatform(): Platform.Native
 }
 ```
 
-**Key Features:**
-- **Kotlin Flow**: Native coroutine-based reactive streams
-- **Project Reactor**: Integration with Reactor Flux
-- **Event Streaming**: Real-time event emission for monitoring/analytics
+Platform detection:
+- `device.name`: `Build.MODEL`
+- `device.version`: `Build.MANUFACTURER`
+- `os.name`: "Android"
+- `os.version`: `Build.VERSION.RELEASE`
+
+### Spring Module
+
+```kotlin
+class SpringRippleClient(config: RippleConfig) : RippleClient(config) {
+    override fun getPlatform(): Platform.Server
+}
+```
+
+### Reactive Module
+
+```kotlin
+class ReactiveRippleClient(config: RippleConfig) : RippleClient(config) {
+    suspend fun <T : RippleEvent> trackReactive(event: T)
+    suspend fun trackReactive(name: String, payload: Map<String, Any>?)
+    fun getEventFlow(): Flow<Event>
+    fun getEventFlux(): Flux<Event>
+}
+```
 
 ## Configuration
 
 ### RippleConfig
 ```kotlin
 data class RippleConfig(
-    val apiKey: String,                         // Required: API authentication
-    val endpoint: String,                       // Required: API endpoint URL
-    val apiKeyHeader: String = "X-API-Key",     // Header name for API key
-    val flushInterval: Long = 5000L,            // Auto-flush interval (ms)
-    val maxBatchSize: Int = 10,                 // Max events per batch
-    val maxRetries: Int = 3,                    // Max retry attempts
-    val adapters: AdapterConfig                 // Platform adapters
+    val apiKey: String,                         // Required
+    val endpoint: String,                       // Required
+    val apiKeyHeader: String = "X-API-Key",
+    val flushInterval: Long = 5000L,            // ms
+    val maxBatchSize: Int = 10,
+    val maxRetries: Int = 3,
+    val adapters: AdapterConfig
 )
 ```
 
 ### AdapterConfig
 ```kotlin
 data class AdapterConfig(
-    val httpAdapter: HttpAdapter,               // Required: HTTP implementation
-    val storageAdapter: StorageAdapter,         // Required: Storage implementation
-    val loggerAdapter: LoggerAdapter? = null    // Optional: Logging implementation
+    val httpAdapter: HttpAdapter,               // Required
+    val storageAdapter: StorageAdapter,         // Required
+    val loggerAdapter: LoggerAdapter? = null    // Defaults to ConsoleLoggerAdapter(WARN)
 )
-```
-
-## Usage Examples
-
-### Android (Kotlin)
-```kotlin
-val config = RippleConfig(
-    apiKey = "your-api-key",
-    endpoint = "https://api.example.com/events",
-    adapters = AdapterConfig(
-        httpAdapter = OkHttpAdapter(),
-        storageAdapter = SharedPreferencesAdapter(context),
-        loggerAdapter = AndroidLogAdapter(LogLevel.INFO)
-    )
-)
-
-val client = AndroidRippleClient(context, config)
-client.init()
-
-// Set global metadata
-client.setMetadata("user_id", "12345")
-client.setMetadata("app_version", "1.2.0")
-
-// Track events
-client.track("user_login", mapOf("method" to "google"))
-client.track("purchase", mapOf(
-    "product_id" to "abc123",
-    "amount" to 29.99,
-    "currency" to "USD"
-))
-
-// Manual flush and cleanup
-client.flush()
-client.dispose()
-```
-
-### Spring Boot (Kotlin)
-```kotlin
-@Configuration
-class RippleConfiguration {
-    @Bean
-    fun rippleClient(): SpringRippleClient {
-        val config = RippleConfig(
-            apiKey = "your-api-key",
-            endpoint = "https://api.example.com/events",
-            adapters = AdapterConfig(
-                httpAdapter = WebClientAdapter(),
-                storageAdapter = FileStorageAdapter(),
-                loggerAdapter = Slf4jLoggerAdapter()
-            )
-        )
-        return SpringRippleClient(config).apply {
-            init()
-            setMetadata("service", "user-service")
-            setMetadata("environment", "production")
-        }
-    }
-}
-
-@Service
-class UserService(private val rippleClient: SpringRippleClient) {
-    fun createUser(user: User) {
-        // Business logic...
-        
-        rippleClient.track("user_created", mapOf(
-            "user_id" to user.id,
-            "plan" to user.plan
-        ))
-    }
-}
-```
-
-### Spring Boot (Java)
-```java
-@Configuration
-public class RippleConfiguration {
-    @Bean
-    public SpringRippleClient rippleClient() {
-        RippleConfig config = new RippleConfig(
-            "your-api-key",
-            "https://api.example.com/events",
-            "X-API-Key",
-            5000L,
-            10,
-            3,
-            new AdapterConfig(
-                new WebClientAdapter(),
-                new FileStorageAdapter(),
-                new Slf4jLoggerAdapter()
-            )
-        );
-        
-        SpringRippleClient client = new SpringRippleClient(config);
-        client.init();
-        client.setMetadata("service", "java-service");
-        return client;
-    }
-}
-```
-
-### Reactive (Kotlin)
-```kotlin
-val client = ReactiveRippleClient(config)
-client.init()
-
-// Reactive event tracking
-runBlocking {
-    client.trackReactive("page_view", mapOf("page" to "home"))
-}
-
-// Event streaming with Kotlin Flow
-client.getEventFlow()
-    .collect { event ->
-        println("Event tracked: ${event.name}")
-    }
-
-// Event streaming with Project Reactor
-client.getEventFlux()
-    .subscribe { event ->
-        println("Event tracked: ${event.name}")
-    }
 ```
 
 ## Testing
 
 ### Test Structure
-- **Core Tests**: RippleClientTest, DispatcherTest, MetadataManagerTest
-- **Mock Framework**: MockK for Kotlin-friendly mocking
-- **Test Framework**: JUnit 5 with Kotlin coroutine testing support
-- **Coverage**: Comprehensive unit tests for all public APIs
+- **Unit Tests**: RippleClientTest, DispatcherTest, MetadataManagerTest
+- **Concurrency Tests**: ConcurrencyTest (thread safety verification)
+- **E2E Tests**: Android instrumented tests with local test server
 
 ### Running Tests
 ```bash
-# All tests
-./gradlew test
-
-# Specific module
-./gradlew :core:test
-./gradlew :android:test
-./gradlew :spring:test
+./gradlew :core:test                    # Core unit tests
+./gradlew :samples:test-server:run      # Start E2E test server
+./gradlew :samples:android-sample:connectedDebugAndroidTest  # E2E tests
 ```
+
+### Concurrency Tests Cover
+- Concurrent `track()` calls
+- Concurrent `setMetadata()` calls
+- Concurrent `flush()` calls (mutex verification)
+- `track()` and `dispose()` race conditions
+- Concurrent `init()` calls (idempotency)
 
 ## Build System
 
-### Multi-module Gradle Project
-- **Version Catalog**: Centralized dependency management in `gradle/libs.versions.toml`
-- **Convention Plugins**: Shared build logic in `buildSrc/`
-- **Publishing**: GitHub Packages with Maven Central support (TODO)
-- **CI/CD**: GitHub Actions for build, test, and release
-
-### Key Dependencies
-- **Kotlin**: 1.9.21 with coroutines 1.7.3
-- **Serialization**: kotlinx-serialization-json 1.6.2
-- **Android**: OkHttp 4.12.0, AppCompat 1.6.1
-- **Spring**: Spring Boot 3.2.0, WebFlux
-- **Reactive**: Project Reactor 3.6.0
-- **Testing**: JUnit 5.10.1, MockK 1.13.8
-
-## Performance Characteristics
-
-### Memory Usage
-- **Minimal Overhead**: Lightweight data structures, no unnecessary allocations
-- **Event Pooling**: Events are simple data classes, GC-friendly
-- **Queue Management**: Bounded by configuration, prevents memory leaks
-
-### Threading Model
-- **Main Thread**: All public APIs are non-blocking
-- **Background Threads**: Dedicated thread pool for HTTP operations (2 threads)
-- **Coroutines**: Structured concurrency for async operations
-- **Synchronization**: Minimal locking, atomic operations where possible
-
-### Network Efficiency
-- **Batching**: Reduces HTTP requests by grouping events
-- **Compression**: JSON payload compression (adapter-dependent)
-- **Retry Strategy**: Intelligent backoff prevents server overload
-- **Offline Support**: Graceful handling of network unavailability
-
-## Error Handling
-
-### Client Errors
-- **IllegalStateException**: Client not initialized
-- **Configuration Errors**: Invalid config parameters logged and handled
-
-### Network Errors
-- **HTTP Errors**: Automatic retry with exponential backoff
-- **Timeout Errors**: Configurable timeouts in HTTP adapters
-- **Connection Errors**: Events persisted for later retry
-
-### Storage Errors
-- **Persistence Failures**: Logged but don't block event tracking
-- **Recovery Failures**: Graceful degradation, continue with empty queue
-
-## Security Considerations
-
-### API Key Management
-- **Header-based**: Configurable API key header name
-- **Environment Variables**: Support for secure credential storage
-- **No Logging**: API keys never logged in debug output
-
-### Data Privacy
-- **No PII**: SDK doesn't collect personal information automatically
-- **User Control**: All event data controlled by application
-- **Metadata Filtering**: Applications can filter sensitive data
-
-### Network Security
-- **HTTPS**: Recommended for all API endpoints
-- **Certificate Validation**: Standard SSL/TLS validation in HTTP adapters
-- **Request Signing**: Can be implemented in custom HTTP adapters
-
-## Monitoring and Observability
-
-### Logging Levels
-- **DEBUG**: Detailed operation logs, queue sizes, timing
-- **INFO**: Lifecycle events, successful operations
-- **WARN**: Retry attempts, configuration issues
-- **ERROR**: Failed operations, critical errors
-
-### Metrics (Available via Logging)
-- **Queue Size**: Current number of queued events
-- **Flush Success/Failure**: HTTP operation results
-- **Retry Attempts**: Number of retry attempts per batch
-- **Event Throughput**: Events processed per time period
-
-### Health Checks
-- **Initialization Status**: `isInitialized` flag
-- **Queue Health**: Queue size monitoring
-- **Network Health**: HTTP adapter success rates
-
-## Migration and Compatibility
-
-### Version Compatibility
-- **Semantic Versioning**: Major.Minor.Patch versioning
-- **Backward Compatibility**: Maintained within major versions
-- **Deprecation Policy**: 2 minor versions notice for breaking changes
-
-### Platform Requirements
-- **Android**: API level 21+ (Android 5.0)
-- **JVM**: Java 8+ / Kotlin 1.9+
-- **Spring**: Spring Boot 3.0+ (Spring Framework 6.0+)
-
-### Upgrade Path
-- **Configuration Migration**: Automated config validation
-- **Data Migration**: Storage format versioning
-- **API Evolution**: Gradual deprecation of old APIs
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Events Not Sending**
-   - Check network connectivity
-   - Verify API key and endpoint
-   - Check logs for HTTP errors
-   - Ensure client is initialized
-
-2. **High Memory Usage**
-   - Check queue size with `getQueueSize()`
-   - Reduce `flushInterval` or `maxBatchSize`
-   - Ensure `dispose()` is called
-
-3. **Performance Issues**
-   - Monitor flush frequency
-   - Check HTTP adapter timeouts
-   - Verify background thread usage
-
-### Debug Configuration
-```kotlin
-val config = RippleConfig(
-    // ... other config
-    adapters = AdapterConfig(
-        // ... other adapters
-        loggerAdapter = AndroidLogAdapter(LogLevel.DEBUG) // Enable debug logging
-    )
-)
+### Module Structure
+```
+:core                           # Shared core
+:android:android-core           # Android client
+:android:adapters:okhttp        # OkHttp adapter
+:android:adapters:room          # Room storage adapter
+:android:adapters:logging       # Android Log adapter
+:android:adapters:storage-preferences  # SharedPreferences adapter
+:spring:spring-core             # Spring client
+:spring:adapters:webflux        # WebClient adapter
+:spring:adapters:logging        # SLF4J adapter
+:spring:adapters:storage-file   # File storage adapter
+:reactive:reactive-core         # Reactive client
+:reactive:adapters:reactor      # Reactor adapter
+:samples:android-sample         # Android sample app
+:samples:spring-sample          # Spring sample
+:samples:test-server            # E2E test server
 ```
 
-### Support Resources
-- **GitHub Issues**: Bug reports and feature requests
-- **Documentation**: Comprehensive API documentation
-- **Examples**: Sample implementations for all platforms
-- **Community**: Kotlin/Android developer community support
+### Publishing
+- GitHub Packages: Automated on git tag push
+- Maven Central: Configured, requires secrets setup
+- JAR naming: `archiveBaseName` matches `artifactId`
+
+## API Contract Compliance
+
+This implementation follows the [Ripple SDK API Contract](https://github.com/Tap30/ripple/blob/main/DESIGN_AND_CONTRACTS.md):
+
+| Contract Requirement | Status | Notes |
+|---------------------|--------|-------|
+| `init()` before `track()` | ✅ | Throws IllegalStateException |
+| Re-initialization after dispose | ✅ | Dispatcher recreated |
+| `getSessionId()` public | ✅ | Returns null before init |
+| `getMetadata()` method | ✅ | Returns shallow copy |
+| Session ID format | ✅ | `{timestamp}-{random}` |
+| Platform discriminated union | ✅ | Sealed class with Web/Native/Server |
+| 4xx no retry | ✅ | Immediate persist |
+| 5xx retry | ✅ | Exponential backoff |
+| FIFO order on requeue | ✅ | Failed events prepended |
+| Jitter 0-1000ms | ✅ | Random.nextLong(0, 1000) |
+| Default logger | ✅ | ConsoleLoggerAdapter(WARN) |
+| Concurrency tests | ✅ | ConcurrencyTest.kt |
+| Multi-instance support | ✅ | Each instance independent |
+| Type-safe events | ✅ | RippleEvent interface |
+| Type-safe metadata | ✅ | RippleMetadata interface |
+
+## Changelog
+
+### v1.0.0-alpha.4 (2026-01-07)
+- **Added**: `RippleEvent` interface for type-safe event tracking
+- **Added**: `RippleMetadata` interface for type-safe metadata
+- **Added**: Multiple `track()` overloads for typed/untyped usage
+- **Changed**: Session ID now managed internally by base client
+- **Changed**: `dispose()` clears metadata and session ID
+- **Removed**: Generic type parameters from client classes
+
+### v1.0.0-alpha.3 (2026-01-07)
+- **Breaking**: Platform changed from data class to sealed class
+- **Breaking**: `getSessionId()` now public (was protected)
+- **Added**: `getMetadata()` method
+- **Added**: Re-initialization support after `dispose()`
+- **Added**: `ConsoleLoggerAdapter` and `NoOpLoggerAdapter`
+- **Added**: Concurrency tests
+- **Fixed**: 4xx errors no longer retry
+- **Fixed**: Failed events maintain FIFO order on requeue
+- **Fixed**: Jitter range corrected to 0-1000ms
+- **Fixed**: Session ID format changed to `{timestamp}-{random}`
+
+### v1.0.0-alpha.2
+- Modular adapter architecture
+- Room storage adapter
+- GitHub Actions CI/CD
+- Maven Central publishing setup
+
+### v1.0.0-alpha.1
+- Initial release
+- Core SDK with Android and Spring support

@@ -19,7 +19,7 @@ publishing {
 }
 
 dependencies {
-    implementation(project(":core"))
+    api(project(":core"))
     api(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     

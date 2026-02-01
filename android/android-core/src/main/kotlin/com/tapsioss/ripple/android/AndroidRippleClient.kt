@@ -1,67 +1,42 @@
 package com.tapsioss.ripple.android
 
-import android.content.Context
+import com.tapsioss.ripple.core.DefaultRippleEvent
+import com.tapsioss.ripple.core.DefaultRippleMetadata
+import com.tapsioss.ripple.core.DeviceInfo
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
-import java.util.UUID
+import com.tapsioss.ripple.core.RippleEvent
+import com.tapsioss.ripple.core.RippleMetadata
 
 /**
- * Android-specific Ripple client implementation.
+ * Android-specific Ripple client.
  * 
- * Provides event tracking optimized for Android applications with
- * automatic session management and platform detection.
- * 
- * Example usage:
- * ```kotlin
- * val config = RippleConfig(
- *     apiKey = "your-api-key",
- *     endpoint = "https://api.example.com/events",
- *     adapters = AdapterConfig(
- *         httpAdapter = OkHttpAdapter(),
- *         storageAdapter = SharedPreferencesAdapter(context),
- *         loggerAdapter = AndroidLogAdapter()
- *     )
- * )
- * 
- * val client = AndroidRippleClient(context, config)
- * client.init()
- * client.track("app_opened")
- * ```
- * 
- * @param context Android application context
+ * @param TEvents Event type implementing [RippleEvent] for type-safe tracking
+ * @param TMetadata Metadata type implementing [RippleMetadata] for type-safe metadata
  * @param config Ripple configuration
  */
-class AndroidRippleClient(
-    private val context: Context,
+class AndroidRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     config: RippleConfig
-) : RippleClient(config) {
-    
-    private val sessionManager = SessionManager()
-    private val platformDetector = PlatformDetector()
+) : RippleClient<TEvents, TMetadata>(config) {
 
-    override fun getSessionId(): String? = sessionManager.getSessionId()
-
-    override fun getPlatform(): Platform? = platformDetector.getPlatform()
-}
-
-/**
- * Manages session IDs for event tracking.
- */
-internal class SessionManager {
-    private val sessionId: String = UUID.randomUUID().toString()
-    
-    fun getSessionId(): String = sessionId
-}
-
-/**
- * Detects platform information for event context.
- */
-internal class PlatformDetector {
-    fun getPlatform(): Platform = Platform(
-        os = "Android",
-        osVersion = android.os.Build.VERSION.RELEASE,
-        device = android.os.Build.MODEL,
-        manufacturer = android.os.Build.MANUFACTURER
+    override fun getPlatform(): Platform = Platform.Native(
+        device = DeviceInfo(
+            name = android.os.Build.MODEL,
+            version = android.os.Build.MANUFACTURER
+        ),
+        os = DeviceInfo(
+            name = "Android",
+            version = android.os.Build.VERSION.RELEASE
+        )
     )
+
+    companion object {
+        /**
+         * Create an untyped Android client for simple usage.
+         */
+        fun create(config: RippleConfig): AndroidRippleClient<DefaultRippleEvent, DefaultRippleMetadata> {
+            return AndroidRippleClient(config)
+        }
+    }
 }
