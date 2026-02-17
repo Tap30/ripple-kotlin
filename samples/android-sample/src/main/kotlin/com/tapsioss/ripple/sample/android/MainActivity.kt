@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
             maxBatchSize = 10,
             adapters = AdapterConfig(
                 httpAdapter = OkHttpAdapter(),
-                storageAdapter = RoomStorageAdapterFactory.create(this),
+                storageAdapter = RoomStorageAdapterFactory.create(this, ttl = 3600),
                 loggerAdapter = AndroidLogAdapter(logLevel = LogLevel.DEBUG)
             )
         )
