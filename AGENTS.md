@@ -54,7 +54,7 @@ ripple-kotlin/
 
 ### 📦 Pluggable Architecture
 - **HTTP Adapters**: OkHttp (Android), WebClient (Spring), custom
-- **Storage Adapters**: SharedPreferences, Room, File system, custom
+- **Storage Adapters**: SharedPreferences, Room, File system, custom (all support optional TTL)
 - **Logger Adapters**: Android Log, SLF4J, Console, NoOp
 
 ## Type-Safe API
