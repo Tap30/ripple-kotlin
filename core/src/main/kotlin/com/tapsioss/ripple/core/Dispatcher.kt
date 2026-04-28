@@ -158,6 +158,18 @@ class Dispatcher(
                             }
                         }
 
+                        else -> {
+                            // Unexpected status (e.g., -1 from adapter errors), drop batch
+                            loggerAdapter.error(
+                                "Unexpected response status, dropping batch", mapOf(
+                                    "status" to response.status,
+                                    "eventsCount" to batch.size,
+                                    "data" to response.data
+                                )
+                            )
+                            break // Drop this batch, move to next
+                        }
+
                     }
                 } catch (e: Exception) {
                     // Network error occurred
