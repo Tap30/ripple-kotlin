@@ -26,6 +26,7 @@ class WebClientAdapter(
     private val json = Json { 
         ignoreUnknownKeys = true
         encodeDefaults = true
+        classDiscriminator = "_type"
     }
 
     override fun send(
