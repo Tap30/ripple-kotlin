@@ -7,6 +7,7 @@ plugins {
 dependencies {
     api(project(":core"))
     implementation(libs.kotlinx.coroutines.reactive)
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.reactor.core)
     
     testImplementation(libs.junit.jupiter)

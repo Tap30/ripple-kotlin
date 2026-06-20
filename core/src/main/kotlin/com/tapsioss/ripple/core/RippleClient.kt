@@ -14,7 +14,9 @@ import com.tapsioss.ripple.core.adapters.ConsoleLoggerAdapter
  * sealed class AppEvent : RippleEvent {
  *     data class UserLogin(val email: String) : AppEvent() {
  *         override val name = "user.login"
- *         override fun toPayload() = mapOf("email" to email)
+ *         override fun getPayload() = buildJsonObject {
+ *             put("email", email)
+ *         }
  *     }
  * }
  * 
@@ -41,29 +43,42 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
 ) {
     
     private val metadataManager = MetadataManager()
+    private val loggerAdapter = config.adapters.loggerAdapter ?: ConsoleLoggerAdapter()
     private var dispatcher: Dispatcher? = null
-    private var sessionId: String? = null
+    private var anonymousId: String = ""
+    private var userId: String? = null
+    val events: EventsNamespace = EventsNamespace(this)
     
     @Volatile
     protected var isInitialized = false
 
+    @Volatile
+    private var isDisposed = false
+
     /**
      * Initialize the client.
-     * Must be called before tracking events. Can be called after dispose().
+     * Called automatically by track() when needed. Can be called after dispose().
      */
     open fun init() {
         if (isInitialized) return
         
         synchronized(this) {
             if (isInitialized) return
-            
-            sessionId = generateSessionId()
+
+            if (isDisposed) {
+                isDisposed = false
+            }
+
+            anonymousId = loadAnonymousId() ?: anonymousId.takeIf { it.isNotBlank() } ?: generateAnonymousId()
+            saveAnonymousId(anonymousId)
+            userId = userId ?: loadUserId()
+
+            initializeStorageAdapter()
             dispatcher = createDispatcher()
             dispatcher?.restore()
-            dispatcher?.startScheduledFlush()
 
             isInitialized = true
-            config.adapters.loggerAdapter?.info("RippleClient initialized")
+            loggerAdapter.info("RippleClient initialized")
         }
     }
 
@@ -71,67 +86,93 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
 
     /**
      * Track a type-safe event.
-     * 
+     *
      * @param event Event implementing [RippleEvent]
      */
     fun track(event: TEvents) {
-        trackInternal(event.name, event.toPayload(), null)
+        trackInternal(event.name, event.getPayload(), event.schemaVersion)
     }
 
-    /**
-     * Track a type-safe event with type-safe metadata.
-     * 
-     * @param event Event implementing [RippleEvent]
-     * @param metadata Type-safe metadata
-     */
-    fun track(event: TEvents, metadata: TMetadata) {
-        trackInternal(event.name, event.toPayload(), metadata.toMap())
-    }
-
-    /**
-     * Track a type-safe event with untyped metadata.
-     * 
-     * @param event Event implementing [RippleEvent]
-     * @param metadata Optional metadata map
-     */
-    fun track(event: TEvents, metadata: Map<String, Any>?) {
-        trackInternal(event.name, event.toPayload(), metadata)
+    internal fun trackPredefined(
+        name: String,
+        payload: kotlinx.serialization.json.JsonObject,
+        schemaVersion: String? = PREDEFINED_SCHEMA_VERSION
+    ) {
+        trackInternal(name, payload, schemaVersion)
     }
 
     // ==================== UNTYPED TRACK METHODS ====================
 
     /**
      * Track an untyped event.
-     * 
+     *
      * @param name Event name
      * @param payload Optional payload
-     * @param metadata Optional metadata
+     * @param schemaVersion Optional event schema version
      */
     @JvmOverloads
-    fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null) {
-        trackInternal(name, payload, metadata)
+    fun track(
+        name: String,
+        payload: Map<String, Any>? = null,
+        schemaVersion: String? = null
+    ) {
+        trackInternal(name, payload?.toJsonObject(), schemaVersion)
     }
 
-    /**
-     * Track an untyped event with type-safe metadata.
-     */
-    fun track(name: String, payload: Map<String, Any>?, metadata: TMetadata) {
-        trackInternal(name, payload, metadata.toMap())
-    }
+    protected fun trackInternal(
+        name: String,
+        payload: kotlinx.serialization.json.JsonObject?,
+        schemaVersion: String?
+    ) {
+        if (isDisposed) {
+            loggerAdapter.warn("Cannot track event: Client has been disposed")
+            return
+        }
 
-    private fun trackInternal(name: String, payload: Map<String, Any>?, metadata: Map<String, Any>?) {
-        checkInitialized()
+        init()
 
         val event = Event(
             name = name,
             payload = payload,
             issuedAt = System.currentTimeMillis(),
-            metadata = metadataManager.merge(metadata),
-            sessionId = sessionId,
-            platform = getPlatform()
+            metadata = metadataManager.getAll(),
+            platform = getPlatform(),
+            sdk = getSdkInfo(),
+            anonymousId = anonymousId,
+            eventId = generateEventId(),
+            schemaVersion = schemaVersion,
+            userId = userId
         )
 
         dispatcher?.enqueue(event)
+    }
+
+    // ==================== V2 IDENTITY & PREDEFINED METHODS ====================
+
+    fun identify(userId: String, traits: UserTraits = UserTraits()) {
+        this.userId = userId
+        saveUserId(userId)
+        trackPredefined("user_identified", UserIdentifiedPayload(userId, traits).toJsonPayload())
+    }
+
+    fun clicked(payload: ClickedPayload) {
+        trackPredefined("clicked", payload.toJsonPayload())
+    }
+
+    fun viewed(payload: ViewedPayload) {
+        trackPredefined("viewed", payload.toJsonPayload())
+    }
+
+    fun screen(payload: ScreenPayload) {
+        trackPredefined("screened", payload.toJsonPayload())
+    }
+
+    fun appOpened() {
+        trackPredefined("app_state_changed", AppStateChangedPayload(AppState.OPENED).toJsonPayload())
+    }
+
+    fun appClosed() {
+        trackPredefined("app_state_changed", AppStateChangedPayload(AppState.CLOSED).toJsonPayload())
     }
 
     // ==================== METADATA METHODS ====================
@@ -154,14 +195,8 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     /**
      * Get all current metadata.
      */
-    fun getMetadata(): Map<String, Any> = metadataManager.getAll()
+    fun getMetadata(): Map<String, Any>? = metadataManager.getAll().ifEmpty { null }
 
-    /**
-     * Remove a metadata key.
-     */
-    fun removeMetadata(key: String) {
-        metadataManager.remove(key)
-    }
 
     /**
      * Clear all metadata.
@@ -170,27 +205,18 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
         metadataManager.clear()
     }
 
-    // ==================== SESSION & FLUSH ====================
+    // ==================== IDENTITY & FLUSH ====================
 
-    /**
-     * Get the current session ID.
-     */
-    fun getSessionId(): String? = sessionId
+    fun getAnonymousId(): String = anonymousId
+
+    fun getUserId(): String? = userId
 
     /**
      * Flush queued events. Non-blocking.
      */
     fun flush() {
         if (!isInitialized) return
-        dispatcher?.flush()
-    }
-
-    /**
-     * Flush queued events and wait for completion. Blocking.
-     */
-    fun flushSync() {
-        if (!isInitialized) return
-        dispatcher?.flushSync()
+        dispatcher?.flush(force = true)
     }
 
     /**
@@ -202,17 +228,13 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
      * Dispose the client. Supports re-initialization via init().
      */
     open fun dispose() {
-        if (!isInitialized) return
-        
         synchronized(this) {
-            if (!isInitialized) return
-            
             dispatcher?.dispose()
             dispatcher = null
             metadataManager.clear()
-            sessionId = null
+            isDisposed = true
             isInitialized = false
-            config.adapters.loggerAdapter?.info("RippleClient disposed")
+            loggerAdapter.info("RippleClient disposed")
         }
     }
 
@@ -220,7 +242,30 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
 
     protected abstract fun getPlatform(): Platform?
 
-    protected open fun generateSessionId(): String = SessionIdGenerator.generate()
+    protected open fun generateAnonymousId(): String = IdGenerator.generate()
+
+    protected open fun generateEventId(): String = IdGenerator.generate()
+
+    protected open fun getSdkInfo(): SdkInfo = DEFAULT_SDK_INFO
+
+    protected open fun loadAnonymousId(): String? = null
+
+    protected open fun saveAnonymousId(anonymousId: String) = Unit
+
+    protected open fun loadUserId(): String? = null
+
+    protected open fun saveUserId(userId: String?) = Unit
+
+    private fun initializeStorageAdapter() {
+        try {
+            config.adapters.storageAdapter.init()
+        } catch (e: Exception) {
+            loggerAdapter.error(
+                "Failed to initialize storage adapter",
+                mapOf("error" to (e.message ?: e::class.java.simpleName))
+            )
+        }
+    }
 
     private fun createDispatcher(): Dispatcher {
         return Dispatcher(
@@ -228,23 +273,74 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
                 endpoint = config.endpoint,
                 apiKey = config.apiKey,
                 apiKeyHeader = config.apiKeyHeader,
-                flushInterval = config.flushInterval,
-                maxBatchSize = config.maxBatchSize,
-                maxRetries = config.maxRetries
+                flushInterval = config.resolvedFlushInterval,
+                maxBatchSize = config.resolvedMaxBatchSize,
+                maxRetries = config.resolvedMaxRetries,
+                maxPayloadSize = config.batchOptions.maxPayloadSize ?: 64L * 1024L,
+                maxBufferSize = config.maxBufferSize,
+                eventTtl = config.eventTtl,
+                retryOptions = config.retryOptions,
+                eventSampler = config.eventSampler,
+                hooks = createTelemetryHooks(config.hooks)
             ),
             httpAdapter = config.adapters.httpAdapter,
             storageAdapter = config.adapters.storageAdapter,
-            loggerAdapter = config.adapters.loggerAdapter ?: ConsoleLoggerAdapter()
+            loggerAdapter = loggerAdapter
         )
     }
 
-    private fun checkInitialized() {
-        if (!isInitialized) {
-            throw IllegalStateException("Client not initialized. Call init() before tracking events.")
-        }
+    private fun createTelemetryHooks(userHooks: TelemetryHooks): TelemetryHooks {
+        val options = config.telemetryOptions
+        if (options == null || options.disabled || options.endpoint.isBlank()) return userHooks
+
+        val reporter = TelemetryReporter(
+            endpoint = options.endpoint,
+            apiKey = config.apiKey,
+            apiKeyHeader = config.apiKeyHeader,
+            httpAdapter = config.adapters.httpAdapter,
+            loggerAdapter = loggerAdapter,
+            getAnonymousId = { anonymousId },
+            getUserId = { userId },
+            getMetadata = { getMetadata() },
+            getPlatform = { getPlatform() },
+            getSdk = { getSdkInfo() },
+            generateEventId = { generateEventId() }
+        )
+
+        return TelemetryHooks(
+            onFlush = {
+                reporter.reportFlush(it)
+                userHooks.onFlush?.invoke(it)
+            },
+            onSendSuccess = {
+                reporter.reportSendSuccess(it)
+                userHooks.onSendSuccess?.invoke(it)
+            },
+            onSendFailure = {
+                reporter.reportSendFailure(it)
+                userHooks.onSendFailure?.invoke(it)
+            },
+            onRetry = {
+                reporter.reportRetry(it)
+                userHooks.onRetry?.invoke(it)
+            },
+            onDrop = {
+                reporter.reportDrop(it)
+                userHooks.onDrop?.invoke(it)
+            },
+            onEnqueue = {
+                reporter.reportEnqueue(it)
+                userHooks.onEnqueue?.invoke(it)
+            }
+        )
     }
 
     companion object {
+        private val DEFAULT_SDK_INFO = SdkInfo(
+            name = "ripple-kotlin",
+            version = RippleClient::class.java.`package`?.implementationVersion ?: "unknown"
+        )
+
         /**
          * Create an untyped client for simple usage.
          * Uses default implementations for events and metadata.

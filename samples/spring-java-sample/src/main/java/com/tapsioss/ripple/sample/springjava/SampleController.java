@@ -2,6 +2,9 @@ package com.tapsioss.ripple.sample.springjava;
 
 import com.tapsioss.ripple.core.DefaultRippleEvent;
 import com.tapsioss.ripple.core.DefaultRippleMetadata;
+import com.tapsioss.ripple.core.ClickedPayload;
+import com.tapsioss.ripple.core.ScreenPayload;
+import com.tapsioss.ripple.core.ViewedPayload;
 import com.tapsioss.ripple.spring.SpringRippleClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +42,17 @@ public class SampleController {
         payload.put("user_agent", "java-client");
         
         rippleClient.track("page_view", payload);
+        rippleClient.screen(new ScreenPayload(
+            "Java page: " + pageName,
+            null,
+            "/api/page/" + pageName,
+            null,
+            null,
+            null,
+            null,
+            null
+        ));
+        rippleClient.viewed(new ViewedPayload("page-" + pageName, "page", pageName, null));
         
         // Track API request performance
         Map<String, Object> perfPayload = new HashMap<>();
@@ -55,7 +69,8 @@ public class SampleController {
         response.put("status", "tracked");
         response.put("page", pageName);
         response.put("queueSize", rippleClient.getQueueSize());
-        response.put("sessionId", rippleClient.getSessionId());
+        response.put("anonymousId", rippleClient.getAnonymousId());
+        response.put("userId", rippleClient.getUserId());
         return response;
     }
 
@@ -68,7 +83,6 @@ public class SampleController {
         
         // Set user context metadata
         rippleClient.setMetadata("user_id", request.getUserId());
-        rippleClient.setMetadata("session_id", request.getSessionId());
         
         // Track user action with payload and event-specific metadata
         Map<String, Object> payload = new HashMap<>();
@@ -76,11 +90,8 @@ public class SampleController {
         payload.put("target", request.getTarget());
         payload.put("timestamp", System.currentTimeMillis());
         
-        Map<String, Object> eventMetadata = new HashMap<>();
-        eventMetadata.put("source", "api");
-        eventMetadata.put("client_type", "java");
-        
-        rippleClient.track("user_action", payload, eventMetadata);
+        rippleClient.track("user_action", payload);
+        rippleClient.clicked(new ClickedPayload(request.getTarget(), "action", request.getAction(), null));
         
         // Track the API request itself
         Map<String, Object> apiPayload = new HashMap<>();
@@ -114,9 +125,6 @@ public class SampleController {
         
         rippleClient.track("flush_triggered", payload);
         
-        // Synchronous flush - waits for completion
-        rippleClient.flushSync();
-        
         logger.info("Manually flushed {} events", queueSizeBefore);
         
         Map<String, Object> response = new HashMap<>();
@@ -133,7 +141,8 @@ public class SampleController {
     public Map<String, Object> getStatus() {
         Map<String, Object> response = new HashMap<>();
         response.put("queueSize", rippleClient.getQueueSize());
-        response.put("sessionId", rippleClient.getSessionId());
+        response.put("anonymousId", rippleClient.getAnonymousId());
+        response.put("userId", rippleClient.getUserId());
         response.put("metadata", rippleClient.getMetadata());
         response.put("timestamp", System.currentTimeMillis());
         return response;
@@ -168,7 +177,6 @@ class ActionRequest {
     private String userId;
     private String action;
     private String target;
-    private String sessionId;
 
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
@@ -179,6 +187,4 @@ class ActionRequest {
     public String getTarget() { return target; }
     public void setTarget(String target) { this.target = target; }
     
-    public String getSessionId() { return sessionId; }
-    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
 }

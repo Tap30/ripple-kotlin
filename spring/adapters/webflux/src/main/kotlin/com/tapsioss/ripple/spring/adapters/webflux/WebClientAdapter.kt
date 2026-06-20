@@ -53,7 +53,12 @@ class WebClientAdapter(
                             ok = clientResponse.statusCode().is2xxSuccessful,
                             status = clientResponse.statusCode().value(),
                             data = if (clientResponse.statusCode().is2xxSuccessful) {
-                                clientResponse.awaitBody<String>()
+                                val contentLength = clientResponse.headers().contentLength().orElse(-1L)
+                                if (clientResponse.statusCode().value() == 204 || contentLength == 0L) {
+                                    null
+                                } else {
+                                    clientResponse.awaitBody<String>()
+                                }
                             } else {
                                 "HTTP ${clientResponse.statusCode().value()}"
                             }

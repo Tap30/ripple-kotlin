@@ -25,7 +25,7 @@ class FileStorageAdapterTest {
     @Test
     fun `save and load events without TTL`() {
         val adapter = FileStorageAdapter(storagePath)
-        val events = listOf(Event("test", null, System.currentTimeMillis(), null, null, null))
+        val events = listOf(Event("test", null, System.currentTimeMillis(), null, null))
         
         adapter.save(events)
         val loaded = adapter.load()
@@ -43,7 +43,7 @@ class FileStorageAdapterTest {
     @Test
     fun `clear removes saved events`() {
         val adapter = FileStorageAdapter(storagePath)
-        adapter.save(listOf(Event("test", null, System.currentTimeMillis(), null, null, null)))
+        adapter.save(listOf(Event("test", null, System.currentTimeMillis(), null, null)))
         
         adapter.clear()
         
@@ -53,7 +53,7 @@ class FileStorageAdapterTest {
     @Test
     fun `load returns events within TTL`() {
         val adapter = FileStorageAdapter(storagePath, ttl = 10_000L)
-        val events = listOf(Event("test", null, System.currentTimeMillis(), null, null, null))
+        val events = listOf(Event("test", null, System.currentTimeMillis(), null, null))
         
         adapter.save(events)
         val loaded = adapter.load()
@@ -64,7 +64,7 @@ class FileStorageAdapterTest {
     @Test
     fun `load returns empty and clears when TTL expired`() {
         val adapter = FileStorageAdapter(storagePath, ttl = 1L)
-        adapter.save(listOf(Event("test", null, System.currentTimeMillis(), null, null, null)))
+        adapter.save(listOf(Event("test", null, System.currentTimeMillis(), null, null)))
         
         Thread.sleep(10)
         

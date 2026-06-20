@@ -1,5 +1,7 @@
 package com.tapsioss.ripple.core
 
+import kotlinx.serialization.json.JsonObject
+
 /**
  * Interface for type-safe event tracking.
  * 
@@ -11,12 +13,18 @@ package com.tapsioss.ripple.core
  * sealed class AppEvent : RippleEvent {
  *     data class UserLogin(val email: String, val method: String) : AppEvent() {
  *         override val name = "user.login"
- *         override fun toPayload() = mapOf("email" to email, "method" to method)
+ *         override fun getPayload() = buildJsonObject {
+ *             put("email", email)
+ *             put("method", method)
+ *         }
  *     }
  *     
  *     data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
  *         override val name = "purchase"
- *         override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+ *         override fun getPayload() = buildJsonObject {
+ *             put("orderId", orderId)
+ *             put("amount", amount)
+ *         }
  *     }
  * }
  * 
@@ -27,9 +35,12 @@ package com.tapsioss.ripple.core
 interface RippleEvent {
     /** Event name/identifier */
     val name: String
-    
-    /** Convert event data to payload map */
-    fun toPayload(): Map<String, Any>?
+
+    /** Optional schema version for versioned event contracts. */
+    val schemaVersion: String?
+        get() = null
+
+    fun getPayload(): JsonObject?
 }
 
 /**

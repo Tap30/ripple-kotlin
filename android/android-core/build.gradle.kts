@@ -6,11 +6,14 @@ plugins {
 
 dependencies {
     api(project(":core"))
+    implementation(libs.kotlinx.serialization.json)
     
     // Use provided scope for Android dependencies
     compileOnly("com.google.android:android:4.1.1.4")
     
+    testImplementation("com.google.android:android:4.1.1.4")
     testImplementation(libs.junit.jupiter)
+    testImplementation(kotlin("test"))
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
 }

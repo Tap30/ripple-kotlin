@@ -1,9 +1,12 @@
 package com.tapsioss.ripple.sample.springjava;
 
 import com.tapsioss.ripple.core.AdapterConfig;
+import com.tapsioss.ripple.core.AppState;
+import com.tapsioss.ripple.core.AppStateChangedPayload;
 import com.tapsioss.ripple.core.DefaultRippleEvent;
 import com.tapsioss.ripple.core.DefaultRippleMetadata;
 import com.tapsioss.ripple.core.RippleConfig;
+import com.tapsioss.ripple.core.ScreenPayload;
 import com.tapsioss.ripple.core.adapters.LogLevel;
 import com.tapsioss.ripple.spring.SpringRippleClient;
 import com.tapsioss.ripple.spring.adapters.storage.FileStorageAdapter;
@@ -69,6 +72,18 @@ public class JavaSampleApplication {
         startupPayload.put("jvm_version", System.getProperty("java.version"));
         
         client.track("application_startup", startupPayload);
+        client.screen(new ScreenPayload(
+            "Java sample startup",
+            null,
+            "/java-sample/startup",
+            null,
+            null,
+            null,
+            null,
+            null
+        ));
+        client.appOpened();
+        client.getEvents().appStateChanged(new AppStateChangedPayload(AppState.FOREGROUND, AppState.OPENED));
         
         return client;
     }

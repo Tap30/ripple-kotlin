@@ -1,14 +1,17 @@
 package com.tapsioss.ripple.spring.adapters.storage
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import com.tapsioss.ripple.core.Event
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
+@Serializable
 private data class StorageData(val events: List<Event>, val savedAt: Long)
 
 /**
@@ -23,12 +26,18 @@ private data class StorageData(val events: List<Event>, val savedAt: Long)
  */
 class FileStorageAdapter(
     private val storagePath: Path = Files.createTempDirectory("ripple").resolve("events.json"),
-    private val objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule(),
+    @Suppress("UNUSED_PARAMETER")
+    objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule(),
     private val ttl: Long? = null
 ) : StorageAdapter {
     
     private val file: File = storagePath.toFile()
     private val lock = Any()
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        classDiscriminator = "_type"
+    }
 
     override fun save(events: List<Event>) {
         if (events.isEmpty()) return
@@ -37,7 +46,7 @@ class FileStorageAdapter(
             try {
                 file.parentFile?.mkdirs()
                 val data = StorageData(events, System.currentTimeMillis())
-                objectMapper.writeValue(file, data)
+                file.writeText(json.encodeToString(data))
             } catch (e: Exception) {
                 // Silently fail
             }
@@ -48,7 +57,7 @@ class FileStorageAdapter(
         synchronized(lock) {
             return try {
                 if (!file.exists()) return emptyList()
-                val data = objectMapper.readValue<StorageData>(file)
+                val data = json.decodeFromString<StorageData>(file.readText())
                 if (ttl != null && System.currentTimeMillis() - data.savedAt > ttl) {
                     clear()
                     return emptyList()

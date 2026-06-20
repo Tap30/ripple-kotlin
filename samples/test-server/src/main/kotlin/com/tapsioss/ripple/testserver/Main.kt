@@ -35,7 +35,10 @@ fun main() {
             }
 
             get("/events") {
-                call.respond(events)
+                call.respondText(
+                    Json.encodeToString(JsonArray(events)),
+                    ContentType.Application.Json
+                )
             }
 
             delete("/events") {

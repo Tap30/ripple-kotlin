@@ -8,9 +8,11 @@ import com.tapsioss.ripple.core.RippleClient
 import com.tapsioss.ripple.core.RippleConfig
 import com.tapsioss.ripple.core.RippleEvent
 import com.tapsioss.ripple.core.RippleMetadata
+import com.tapsioss.ripple.core.toJsonObject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.json.JsonObject
 import reactor.core.publisher.Flux
 
 /**
@@ -27,22 +29,23 @@ class ReactiveRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
 
     suspend fun trackReactive(event: TEvents) {
         track(event)
-        emitEvent(event.name, event.toPayload())
+        emitEvent(event.name, event.getPayload())
     }
 
     suspend fun trackReactive(name: String, payload: Map<String, Any>? = null) {
         track(name, payload)
-        emitEvent(name, payload)
+        emitEvent(name, payload?.toJsonObject())
     }
 
-    private suspend fun emitEvent(name: String, payload: Map<String, Any>?) {
+    private suspend fun emitEvent(name: String, payload: JsonObject?) {
         val event = Event(
             name = name,
             payload = payload,
             issuedAt = System.currentTimeMillis(),
-            metadata = getMetadata().ifEmpty { null },
-            sessionId = getSessionId(),
-            platform = getPlatform()
+            metadata = getMetadata(),
+            platform = getPlatform(),
+            anonymousId = getAnonymousId(),
+            userId = getUserId()
         )
         eventFlow.tryEmit(event)
     }

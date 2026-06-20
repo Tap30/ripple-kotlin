@@ -80,8 +80,8 @@ base64 private-key.asc | xclip -selection clipboard
 
 1. **Create and push a version tag:**
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
+   git tag v2.0.0
+   git push origin v2.0.0
    ```
 
 2. **GitHub Actions automatically:**
@@ -114,16 +114,16 @@ Once published, users can add dependencies:
 
 ```kotlin
 // Core module
-implementation("com.tapsioss.ripple:core:1.0.0")
+implementation("io.github.tap30.ripple:core:2.0.0")
 
 // Android module  
-implementation("com.tapsioss.ripple:android:1.0.0")
+implementation("io.github.tap30.ripple:android-core:2.0.0")
 
 // Spring Boot module
-implementation("com.tapsioss.ripple:spring:1.0.0")
+implementation("io.github.tap30.ripple:spring-core:2.0.0")
 
 // Reactive module
-implementation("com.tapsioss.ripple:reactive:1.0.0")
+implementation("io.github.tap30.ripple:reactive-core:2.0.0")
 ```
 
 ## Troubleshooting

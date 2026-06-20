@@ -1,13 +1,21 @@
 package com.tapsioss.ripple.android.adapters.room
 
 import androidx.room.*
+import com.tapsioss.ripple.core.AnySerializer
 import com.tapsioss.ripple.core.Event
 import com.tapsioss.ripple.core.Platform
 import com.tapsioss.ripple.core.adapters.StorageAdapter
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
 
 /**
  * Room database storage adapter for Android.
@@ -29,9 +37,13 @@ class RoomStorageAdapter(
         classDiscriminator = "_type"
     }
 
+    private val metadataSerializer = MapSerializer(String.serializer(), AnySerializer)
+
+
+
     override fun save(events: List<Event>) {
         if (events.isEmpty()) return
-        
+
         runBlocking {
             val savedAt = System.currentTimeMillis()
             val entities = events.map { event ->
@@ -39,13 +51,46 @@ class RoomStorageAdapter(
                     name = event.name,
                     payload = event.payload?.let { json.encodeToString(it) },
                     issuedAt = event.issuedAt,
-                    metadata = event.metadata?.let { json.encodeToString(it) },
-                    sessionId = event.sessionId,
+//                    metadata = event.metadata?.let { metadataToJson(it) },
+                    metadata = event.metadata?.let { json.encodeToString(metadataSerializer, it) },
                     platform = event.platform?.let { json.encodeToString(it) },
                     savedAt = savedAt
                 )
             }
             database.eventDao().insertEvents(entities)
+        }
+    }
+
+    private fun metadataToJson(metadata: Map<String, Any>): String {
+        val jsonObject = JsonObject(metadata.mapValues { (_, value) ->
+            when (value) {
+                is String -> JsonPrimitive(value)
+                is Number -> JsonPrimitive(value)
+                is Boolean -> JsonPrimitive(value)
+                is Map<*, *> -> metadataMapToJsonElement(value)
+                is List<*> -> JsonArray(value.map { metadataValueToJsonElement(it) })
+                null -> JsonNull
+                else -> JsonPrimitive(value.toString())
+            }
+        })
+        return json.encodeToString(jsonObject)
+    }
+
+    private fun metadataMapToJsonElement(map: Map<*, *>): JsonElement {
+        return JsonObject(map.mapKeys { it.key.toString() }.mapValues { (_, value) ->
+            metadataValueToJsonElement(value)
+        })
+    }
+
+    private fun metadataValueToJsonElement(value: Any?): JsonElement {
+        return when (value) {
+            null -> JsonNull
+            is String -> JsonPrimitive(value)
+            is Number -> JsonPrimitive(value)
+            is Boolean -> JsonPrimitive(value)
+            is Map<*, *> -> metadataMapToJsonElement(value)
+            is List<*> -> JsonArray(value.map { metadataValueToJsonElement(it) })
+            else -> JsonPrimitive(value.toString())
         }
     }
 
@@ -58,10 +103,9 @@ class RoomStorageAdapter(
             database.eventDao().getAllEvents().map { entity ->
                 Event(
                     name = entity.name,
-                    payload = entity.payload?.let { json.decodeFromString(it) },
+                    payload = entity.payload?.let { json.decodeFromString<JsonObject>(it) },
                     issuedAt = entity.issuedAt,
                     metadata = entity.metadata?.let { json.decodeFromString(it) },
-                    sessionId = entity.sessionId,
                     platform = entity.platform?.let { json.decodeFromString(it) }
                 )
             }
@@ -83,7 +127,6 @@ data class EventEntity(
     val payload: String?,
     val issuedAt: Long,
     val metadata: String?,
-    val sessionId: String?,
     val platform: String?,
     val savedAt: Long = System.currentTimeMillis()
 )
@@ -108,7 +151,7 @@ interface EventDao {
 
 @Database(
     entities = [EventEntity::class],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class RippleDatabase : RoomDatabase() {

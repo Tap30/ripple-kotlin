@@ -50,6 +50,7 @@ interface HttpAdapter {
  * Example implementation:
  * ```kotlin
  * class MyStorageAdapter : StorageAdapter {
+ *     override fun init() { /* Open resources if needed */ }
  *     override fun save(events: List<Event>) { /* Save to disk */ }
  *     override fun load(): List<Event> = /* Load from disk */
  *     override fun clear() { /* Delete stored events */ }
@@ -57,6 +58,13 @@ interface HttpAdapter {
  * ```
  */
 interface StorageAdapter {
+    /**
+     * Initialize storage resources before the SDK restores persisted events.
+     *
+     * The default implementation is a no-op so existing adapters remain source-compatible.
+     */
+    fun init() = Unit
+
     /**
      * Save events to local storage for later retry.
      * 

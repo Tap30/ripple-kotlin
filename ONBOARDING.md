@@ -157,10 +157,11 @@ data class RippleConfig(
 
 // Client interface
 interface RippleClient<TEvents, TMetadata> {
-    suspend fun init()
-    suspend fun track(name: String, payload: Map<String, Any>? = null, metadata: TMetadata? = null)
+    fun init()
+    fun track(name: String, payload: Map<String, Any>? = null, schemaVersion: String? = null)
+    fun track(event: TEvents)
     fun setMetadata(key: String, value: Any)
-    suspend fun flush()
+    fun flush()
     fun dispose()
 }
 ```
@@ -168,7 +169,7 @@ interface RippleClient<TEvents, TMetadata> {
 ### Migration Considerations
 
 #### From TypeScript to Kotlin
-- **Promises → Coroutines**: Async operations using suspend functions
+- **Promises → Background dispatch**: Public tracking APIs return immediately while dispatch runs on a background executor
 - **Interfaces → Interfaces**: Direct translation with Kotlin syntax
 - **Generics → Generics**: Enhanced with Kotlin's type system
 - **Error Handling**: Kotlin's Result type and exception handling

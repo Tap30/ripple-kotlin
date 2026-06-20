@@ -16,4 +16,5 @@ dependencies {
     implementation(project(":spring:adapters:storage-file"))
     implementation(libs.spring.boot.starter.webflux)
     implementation(libs.jackson.module.kotlin)
+    implementation(libs.kotlinx.serialization.json)
 }

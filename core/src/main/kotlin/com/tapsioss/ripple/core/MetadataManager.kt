@@ -1,7 +1,5 @@
 package com.tapsioss.ripple.core
 
-import java.util.concurrent.ConcurrentHashMap
-
 /**
  * Thread-safe manager for global metadata attached to all events.
  * Provides type-safe metadata management with generic support.
@@ -9,50 +7,48 @@ import java.util.concurrent.ConcurrentHashMap
  * @param TMetadata The type definition for metadata
  */
 class MetadataManager {
-    private val metadata = ConcurrentHashMap<String, Any>()
+    private val lock = Any()
+    private val metadata = mutableMapOf<String, Any>()
+
+    @Volatile
+    private var snapshot: Map<String, Any>? = null
 
     /**
      * Set a metadata value.
      */
     fun set(key: String, value: Any) {
-        metadata[key] = value
+        synchronized(lock) {
+            metadata[key] = value
+            snapshot = null
+        }
     }
 
     /**
-     * Get all metadata as a copy.
+     * Get all metadata as a cached immutable snapshot.
      */
-    fun getAll(): Map<String, Any> = metadata.toMap()
+    fun getAll(): Map<String, Any> {
+        snapshot?.let { return it }
+
+        return synchronized(lock) {
+            snapshot ?: metadata.toMap().also {
+                snapshot = it
+            }
+        }
+    }
 
     /**
      * Check if metadata is empty.
      */
-    fun isEmpty(): Boolean = metadata.isEmpty()
-
-    /**
-     * Remove a metadata key.
-     */
-    fun remove(key: String) {
-        metadata.remove(key)
-    }
+    fun isEmpty(): Boolean = getAll().isEmpty()
 
     /**
      * Clear all metadata.
      */
     fun clear() {
-        metadata.clear()
+        synchronized(lock) {
+            metadata.clear()
+            snapshot = null
+        }
     }
 
-    /**
-     * Merge shared metadata with event-specific metadata.
-     * Event-specific metadata takes precedence.
-     * 
-     * @param eventMetadata Event-specific metadata
-     * @return Merged metadata or null if both are empty
-     */
-    fun merge(eventMetadata: Map<String, Any>?): Map<String, Any>? {
-        if (isEmpty() && eventMetadata.isNullOrEmpty()) return null
-        if (isEmpty()) return eventMetadata
-        if (eventMetadata.isNullOrEmpty()) return getAll()
-        return getAll() + eventMetadata
-    }
 }

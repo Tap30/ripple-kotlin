@@ -1,13 +1,15 @@
 package com.tapsioss.ripple.core
 
+import kotlinx.serialization.json.JsonObject
+
 /**
  * Default event implementation for untyped usage.
  */
 data class DefaultRippleEvent(
     override val name: String,
-    private val payloadData: Map<String, Any>? = null
+    private val payloadData: JsonObject? = null
 ) : RippleEvent {
-    override fun toPayload(): Map<String, Any>? = payloadData
+    override fun getPayload(): JsonObject? = payloadData
 }
 
 /**

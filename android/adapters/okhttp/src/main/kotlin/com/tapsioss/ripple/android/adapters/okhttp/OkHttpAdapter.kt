@@ -57,7 +57,11 @@ class OkHttpAdapter(
             HttpResponse(
                 ok = response.isSuccessful,
                 status = response.code,
-                data = response.body?.string()
+                data = if (response.code == 204 || response.body?.contentLength() == 0L) {
+                    null
+                } else {
+                    response.body?.string()
+                }
             )
         } catch (e: Exception) {
             HttpResponse(

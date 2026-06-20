@@ -40,28 +40,28 @@
 
 ## Example Release Process
 
-For releasing version 1.0.0:
+For releasing version 2.0.0:
 
 1. **Prepare release:**
    ```bash
    # Update gradle.properties
-   VERSION_NAME=1.0.0
+   VERSION_NAME=2.0.0
    
    # Update CHANGELOG.md
-   ## [1.0.0] - 2024-01-15
+   ## [2.0.0] - 2026-06-20
    ### Added
-   - Initial release
+   - Release notes
    
-   # Update README.md download versions to 1.0.0
+   # Update README.md download versions to 2.0.0
    
-   git commit -am "Prepare version 1.0.0"
-   git tag -am "Version 1.0.0" 1.0.0
+   git commit -am "Prepare version 2.0.0"
+   git tag -am "Version 2.0.0" 2.0.0
    ```
 
 2. **Prepare next development version:**
    ```bash
    # Update gradle.properties
-   VERSION_NAME=1.1.0-SNAPSHOT
+   VERSION_NAME=2.1.0-SNAPSHOT
    
    git commit -am "Prepare next development version"
    ```
