@@ -8,28 +8,17 @@ plugins {
     alias(libs.plugins.spring.boot) apply false
     alias(libs.plugins.spring.dependency.management) apply false
     alias(libs.plugins.ksp) apply false
-    // TODO: Uncomment when ready for Maven Central
-    // alias(libs.plugins.nexus.publish)
+    alias(libs.plugins.nexus.publish)
 }
 
-// Set version from gradle.properties
+// VERSION_NAME comes from gradle.properties locally or ORG_GRADLE_PROJECT_VERSION_NAME in CI.
 allprojects {
-    group = "io.github.tap30.ripple"
+    group = "cab.tapsi.oss"
     version = property("VERSION_NAME") as String
 
     repositories {
-        maven {
-            url = uri("https://maven.myket.ir")
-        }
         google()
         mavenCentral()
-        maven {
-            credentials {
-                username = System.getenv("ARTIFACTORY_ANDROID_USERNAME")
-                password = System.getenv("ARTIFACTORY_ANDROID_PASSWORD")
-            }
-            url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
-        }
         // Add GitHub Packages for consuming dependencies
         maven {
             url = uri("https://maven.pkg.github.com/Tap30/ripple-kotlin")
@@ -39,18 +28,37 @@ allprojects {
                 password = System.getenv("GITHUB_TOKEN") ?: findProperty("githubToken") as String?
             }
         }
+        maven {
+            url = uri("https://maven.myket.ir")
+        }
+        maven {
+            credentials {
+                username = System.getenv("ARTIFACTORY_ANDROID_USERNAME")
+                password = System.getenv("ARTIFACTORY_ANDROID_PASSWORD")
+            }
+            url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
+        }
     }
 }
 
-// TODO: Uncomment when ready for Maven Central
-// nexusPublishing {
-//     repositories {
-//         sonatype {
-//             nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
-//             snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
-//             
-//             username.set(findProperty("ossrhUsername") as String? ?: System.getenv("OSSRH_USERNAME"))
-//             password.set(findProperty("ossrhPassword") as String? ?: System.getenv("OSSRH_PASSWORD"))
-//         }
-//     }
-// }
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://ossrh-staging-api.central.sonatype.com/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://central.sonatype.com/repository/maven-snapshots/"))
+
+            username.set(
+                findProperty("centralPortalUsername") as String?
+                    ?: findProperty("ossrhUsername") as String?
+                    ?: System.getenv("CENTRAL_PORTAL_USERNAME")
+                    ?: System.getenv("OSSRH_USERNAME")
+            )
+            password.set(
+                findProperty("centralPortalPassword") as String?
+                    ?: findProperty("ossrhPassword") as String?
+                    ?: System.getenv("CENTRAL_PORTAL_PASSWORD")
+                    ?: System.getenv("OSSRH_PASSWORD")
+            )
+        }
+    }
+}

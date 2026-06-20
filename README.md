@@ -63,12 +63,12 @@ repositories {
 
 ```kotlin
 // Core functionality
-implementation("io.github.tap30.ripple:core:2.0.0")
+implementation("cab.tapsi.oss:ripple-core:2.0.0")
 
 // Platform modules (lightweight, no adapters included)
-implementation("io.github.tap30.ripple:android-core:2.0.0")
-implementation("io.github.tap30.ripple:spring-core:2.0.0")
-implementation("io.github.tap30.ripple:reactive-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-spring-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-reactive-core:2.0.0")
 ```
 
 ### Adapter Modules (Optional)
@@ -80,19 +80,19 @@ Choose only the adapters you need:
 
 ```kotlin
 // HTTP with OkHttp
-implementation("io.github.tap30.ripple:android-adapters-okhttp:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-okhttp:2.0.0")
 // → OkHttpAdapter
 
 // Storage with SharedPreferences  
-implementation("io.github.tap30.ripple:android-adapters-storage-preferences:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-preferences:2.0.0")
 // → SharedPreferencesAdapter
 
 // Storage with Room Database
-implementation("io.github.tap30.ripple:android-adapters-room:2.0.0") 
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-room:2.0.0") 
 // → RoomStorageAdapter, RoomStorageAdapterFactory
 
 // Android Logging
-implementation("io.github.tap30.ripple:android-adapters-logging:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-logging:2.0.0")
 // → AndroidLogAdapter
 ```
 
@@ -103,15 +103,15 @@ implementation("io.github.tap30.ripple:android-adapters-logging:2.0.0")
 
 ```kotlin
 // HTTP with WebClient (WebFlux)
-implementation("io.github.tap30.ripple:spring-adapters-webflux:2.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-webflux:2.0.0")
 // → WebClientAdapter
 
 // File System Storage
-implementation("io.github.tap30.ripple:spring-adapters-storage-file:2.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-storage-file:2.0.0")
 // → FileStorageAdapter
 
 // SLF4J Logging
-implementation("io.github.tap30.ripple:spring-adapters-logging:2.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-logging:2.0.0")
 // → Slf4jLoggerAdapter
 ```
 
@@ -122,7 +122,7 @@ implementation("io.github.tap30.ripple:spring-adapters-logging:2.0.0")
 
 ```kotlin
 // Project Reactor Support
-implementation("io.github.tap30.ripple:reactive-adapters-reactor:2.0.0")
+implementation("cab.tapsi.oss:ripple-reactive-adapters-reactor:2.0.0")
 // → ReactorAdapter (coming soon)
 ```
 
@@ -134,9 +134,9 @@ implementation("io.github.tap30.ripple:reactive-adapters-reactor:2.0.0")
 
 ```kotlin
 // Add dependencies
-implementation("io.github.tap30.ripple:android-core:2.0.0")
-implementation("io.github.tap30.ripple:android-adapters-okhttp:2.0.0")
-implementation("io.github.tap30.ripple:android-adapters-room:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-okhttp:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-room:2.0.0")
 
 // Usage
 val config = RippleConfig(

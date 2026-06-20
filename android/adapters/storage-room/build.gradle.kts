@@ -1,4 +1,3 @@
-import com.android.build.gradle.internal.api.BaseVariantOutputImpl
 import org.gradle.kotlin.dsl.assign
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
@@ -12,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace = "com.tapsioss.ripple.android.adapters.room"
+    namespace = "cab.tapsi.ripple.android.adapters.room"
     compileSdk = 34
 
     defaultConfig {
@@ -35,25 +34,6 @@ android {
         singleVariant("release") {
             withSourcesJar()
 //            withJavadocJar()
-        }
-    }
-    
-//    // Configure JAR name to match artifactId
-//    libraryVariants.all {
-//        outputs.all {
-//            (this as BaseVariantOutputImpl).outputFileName =
-//                "android-adapters-storage-room-${project.version}.aar"
-//        }
-//    }
-}
-
-// Configure artifact name for Android module
-afterEvaluate {
-    publishing {
-        publications {
-            named<MavenPublication>("maven") {
-                artifactId = "android-adapters-storage-room"
-            }
         }
     }
 }

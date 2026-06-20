@@ -8,11 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "com.tapsioss.ripple.sample.android"
+    namespace = "cab.tapsi.ripple.sample.android"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.tapsioss.ripple.sample.android"
+        applicationId = "cab.tapsi.ripple.sample.android"
         minSdk = 23
         targetSdk = 35
         versionCode = 1
