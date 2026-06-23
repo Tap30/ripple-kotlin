@@ -16,20 +16,24 @@ import kotlinx.serialization.json.Json
  * with Room's async capabilities and type safety.
  * 
  * @param database Room database instance
+ * @param ttl Time-to-live in milliseconds (default: null, no expiration)
  */
 class RoomStorageAdapter(
-    private val database: RippleDatabase
+    private val database: RippleDatabase,
+    private val ttl: Long? = null
 ) : StorageAdapter {
     
     private val json = Json { 
         ignoreUnknownKeys = true
         encodeDefaults = true
+        classDiscriminator = "_type"
     }
 
     override fun save(events: List<Event>) {
         if (events.isEmpty()) return
         
         runBlocking {
+            val savedAt = System.currentTimeMillis()
             val entities = events.map { event ->
                 EventEntity(
                     name = event.name,
@@ -37,7 +41,8 @@ class RoomStorageAdapter(
                     issuedAt = event.issuedAt,
                     metadata = event.metadata?.let { json.encodeToString(it) },
                     sessionId = event.sessionId,
-                    platform = event.platform?.let { json.encodeToString(it) }
+                    platform = event.platform?.let { json.encodeToString(it) },
+                    savedAt = savedAt
                 )
             }
             database.eventDao().insertEvents(entities)
@@ -46,6 +51,10 @@ class RoomStorageAdapter(
 
     override fun load(): List<Event> {
         return runBlocking {
+            if (ttl != null) {
+                val cutoff = System.currentTimeMillis() - ttl
+                database.eventDao().deleteExpiredEvents(cutoff)
+            }
             database.eventDao().getAllEvents().map { entity ->
                 Event(
                     name = entity.name,
@@ -75,7 +84,8 @@ data class EventEntity(
     val issuedAt: Long,
     val metadata: String?,
     val sessionId: String?,
-    val platform: String?
+    val platform: String?,
+    val savedAt: Long = System.currentTimeMillis()
 )
 
 @Dao
@@ -89,13 +99,16 @@ interface EventDao {
     @Query("DELETE FROM events")
     suspend fun deleteAllEvents()
     
+    @Query("DELETE FROM events WHERE savedAt < :cutoff")
+    suspend fun deleteExpiredEvents(cutoff: Long)
+    
     @Query("SELECT COUNT(*) FROM events")
     suspend fun getEventCount(): Int
 }
 
 @Database(
     entities = [EventEntity::class],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class RippleDatabase : RoomDatabase() {
