@@ -1,7 +1,10 @@
-import org.gradle.kotlin.dsl.maven
-
 pluginManagement {
+    includeBuild("build-logic")
+
     repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
         maven {
             url = uri("https://maven.myket.ir")
         }
@@ -12,9 +15,6 @@ pluginManagement {
             }
             url = uri("https://artifactory.tapsi.tech/artifactory/android-gradle-maven")
         }
-        google()
-        mavenCentral()
-        gradlePluginPortal()
     }
 }
 

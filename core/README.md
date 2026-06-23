@@ -7,11 +7,25 @@ Shared core logic and interfaces for Ripple SDK.
 ### RippleClient (Abstract)
 ```kotlin
 abstract class RippleClient(config: RippleConfig) {
-    suspend fun init()
-    suspend fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
+    fun init()
+    fun track(name: String, payload: Map<String, Any>? = null, schemaVersion: String? = null)
+    fun <T : RippleEvent> track(event: T)
     fun setMetadata(key: String, value: Any)
-    suspend fun flush()
+    fun getMetadata(): Map<String, Any>?
+    fun flush()
     fun dispose()
+}
+```
+
+Type-safe events expose JSON payloads directly:
+
+```kotlin
+interface RippleEvent {
+    val name: String
+    val schemaVersion: String?
+        get() = null
+
+    fun getPayload(): JsonObject?
 }
 ```
 
@@ -31,13 +45,13 @@ data class RippleConfig(
 ### Adapters
 ```kotlin
 interface HttpAdapter {
-    suspend fun send(endpoint: String, events: List<Event>, headers: Map<String, String>, apiKeyHeader: String): HttpResponse
+    fun send(endpoint: String, events: List<Event>, headers: Map<String, String>, apiKeyHeader: String): HttpResponse
 }
 
 interface StorageAdapter {
-    suspend fun save(events: List<Event>)
-    suspend fun load(): List<Event>
-    suspend fun clear()
+    fun save(events: List<Event>)
+    fun load(): List<Event>
+    fun clear()
 }
 
 interface LoggerAdapter {
@@ -52,4 +66,4 @@ interface LoggerAdapter {
 - Type-safe metadata management
 - Automatic batching and retry logic
 - Pluggable adapters for HTTP, storage, and logging
-- Coroutine-based concurrency safety
+- Thread-safe queueing and background dispatch

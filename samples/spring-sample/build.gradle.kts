@@ -11,6 +11,7 @@ dependencies {
     implementation(project(":spring:adapters:logging"))
     implementation(project(":spring:adapters:storage-file"))
     implementation(libs.spring.boot.starter.webflux)
+    implementation(libs.kotlinx.serialization.json)
     
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)

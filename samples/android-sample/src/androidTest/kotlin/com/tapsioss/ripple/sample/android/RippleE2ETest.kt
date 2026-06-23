@@ -1,4 +1,4 @@
-package com.tapsioss.ripple.sample.android
+package cab.tapsi.ripple.sample.android
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule

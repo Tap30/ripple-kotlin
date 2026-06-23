@@ -63,12 +63,12 @@ repositories {
 
 ```kotlin
 // Core functionality
-implementation("io.github.tap30.ripple:core:1.0.0")
+implementation("cab.tapsi.oss:ripple-core:2.0.0")
 
 // Platform modules (lightweight, no adapters included)
-implementation("io.github.tap30.ripple:android-core:1.0.0")
-implementation("io.github.tap30.ripple:spring-core:1.0.0")
-implementation("io.github.tap30.ripple:reactive-core:1.0.0")
+implementation("cab.tapsi.oss:ripple-android-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-spring-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-reactive-core:2.0.0")
 ```
 
 ### Adapter Modules (Optional)
@@ -80,19 +80,19 @@ Choose only the adapters you need:
 
 ```kotlin
 // HTTP with OkHttp
-implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-okhttp:2.0.0")
 // → OkHttpAdapter
 
 // Storage with SharedPreferences  
-implementation("io.github.tap30.ripple:android-adapters-storage-preferences:1.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-preferences:2.0.0")
 // → SharedPreferencesAdapter
 
 // Storage with Room Database
-implementation("io.github.tap30.ripple:android-adapters-room:1.0.0") 
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-room:2.0.0") 
 // → RoomStorageAdapter, RoomStorageAdapterFactory
 
 // Android Logging
-implementation("io.github.tap30.ripple:android-adapters-logging:1.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-logging:2.0.0")
 // → AndroidLogAdapter
 ```
 
@@ -103,15 +103,15 @@ implementation("io.github.tap30.ripple:android-adapters-logging:1.0.0")
 
 ```kotlin
 // HTTP with WebClient (WebFlux)
-implementation("io.github.tap30.ripple:spring-adapters-webflux:1.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-webflux:2.0.0")
 // → WebClientAdapter
 
 // File System Storage
-implementation("io.github.tap30.ripple:spring-adapters-storage-file:1.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-storage-file:2.0.0")
 // → FileStorageAdapter
 
 // SLF4J Logging
-implementation("io.github.tap30.ripple:spring-adapters-logging:1.0.0")
+implementation("cab.tapsi.oss:ripple-spring-adapters-logging:2.0.0")
 // → Slf4jLoggerAdapter
 ```
 
@@ -122,7 +122,7 @@ implementation("io.github.tap30.ripple:spring-adapters-logging:1.0.0")
 
 ```kotlin
 // Project Reactor Support
-implementation("io.github.tap30.ripple:reactive-adapters-reactor:1.0.0")
+implementation("cab.tapsi.oss:ripple-reactive-adapters-reactor:2.0.0")
 // → ReactorAdapter (coming soon)
 ```
 
@@ -134,9 +134,9 @@ implementation("io.github.tap30.ripple:reactive-adapters-reactor:1.0.0")
 
 ```kotlin
 // Add dependencies
-implementation("io.github.tap30.ripple:android-core:1.0.0")
-implementation("io.github.tap30.ripple:android-adapters-okhttp:1.0.0")
-implementation("io.github.tap30.ripple:android-adapters-room:1.0.0")
+implementation("cab.tapsi.oss:ripple-android-core:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-okhttp:2.0.0")
+implementation("cab.tapsi.oss:ripple-android-adapters-storage-room:2.0.0")
 
 // Usage
 val config = RippleConfig(
@@ -149,7 +149,7 @@ val config = RippleConfig(
     )
 )
 
-val client = AndroidRippleClient(config)
+val client = AndroidRippleClient(context, config)
 client.init()
 
 // Track events (untyped)
@@ -172,12 +172,18 @@ Define your events with compile-time validation:
 sealed class AppEvent : RippleEvent {
     data class UserLogin(val email: String, val method: String) : AppEvent() {
         override val name = "user.login"
-        override fun toPayload() = mapOf("email" to email, "method" to method)
+        override fun getPayload() = buildJsonObject {
+            put("email", email)
+            put("method", method)
+        }
     }
     
     data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
         override val name = "purchase"
-        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+        override fun getPayload() = buildJsonObject {
+            put("orderId", orderId)
+            put("amount", amount)
+        }
     }
 }
 
@@ -196,9 +202,6 @@ data class AppMetadata(
 client.track(AppEvent.UserLogin("user@example.com", "google"))
 client.track(AppEvent.Purchase("ORD-123", 99.99))
 client.setMetadata(AppMetadata(userId = "user-123", version = "1.0.0"))
-
-// Event-specific metadata
-client.track(AppEvent.Purchase("ORD-456", 50.0), AppMetadata(userId = "vip-user"))
 ```
 
 ### Spring Boot (Kotlin)
@@ -299,15 +302,15 @@ public class UserService {
 
 | Method | Description |
 |--------|-------------|
-| `init()` | Initialize the client. Must be called before tracking. Can be called after dispose(). |
-| `track(name, payload?, metadata?)` | Track an event with optional payload and metadata. |
+| `init()` | Initialize the client and restore persisted events. Called automatically by `track()` when needed. |
+| `track(name, payload?, schemaVersion?)` | Track an event with optional payload and schema version. |
+| `track(event)` | Track a type-safe `RippleEvent` with a `JsonObject` payload. |
 | `setMetadata(key, value)` | Set global metadata attached to all events. |
-| `getMetadata()` | Get all stored metadata as a shallow copy. |
-| `getSessionId()` | Get the current session ID. |
-| `removeMetadata(key)` | Remove a global metadata key. |
+| `getMetadata()` | Get all stored metadata, or null if none is set. |
+| `getAnonymousId()` | Get the anonymous user identifier. |
+| `getUserId()` | Get the identified user ID, if any. |
 | `clearMetadata()` | Clear all global metadata. |
 | `flush()` | Flush queued events asynchronously. |
-| `flushSync()` | Flush queued events and wait for completion. |
 | `getQueueSize()` | Get the number of queued events. |
 | `dispose()` | Clean up resources. Persists unsent events. Supports re-initialization. |
 
@@ -318,7 +321,7 @@ public class UserService {
 | `apiKey` | String | required | API authentication key |
 | `endpoint` | String | required | API endpoint URL |
 | `apiKeyHeader` | String | "X-API-Key" | Header name for API key |
-| `flushInterval` | Long | 5000 | Auto-flush interval in milliseconds |
+| `flushInterval` | Long | 10000 | Auto-flush interval in milliseconds |
 | `maxBatchSize` | Int | 10 | Maximum events per batch |
 | `maxRetries` | Int | 3 | Maximum retry attempts |
 | `adapters` | AdapterConfig | required | Platform adapters |
@@ -329,7 +332,6 @@ All public methods are thread-safe and can be called from any thread:
 
 - `track()` is non-blocking and returns immediately
 - `flush()` is non-blocking and submits work to background thread
-- `flushSync()` blocks until completion (use for critical events)
 - Multiple concurrent calls are handled gracefully
 
 ## Offline Support
@@ -370,7 +372,7 @@ monitoringClient.track("performance", mapOf("latency" to 150))
 Each instance maintains its own:
 - Event queue
 - Metadata storage
-- Session ID
+- Anonymous identity
 - Flush scheduler
 
 ## Retry Behavior

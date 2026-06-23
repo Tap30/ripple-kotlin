@@ -9,7 +9,8 @@ Reactive streams support for Ripple SDK with Kotlin Flow and Project Reactor.
 class ReactiveRippleClient(config: RippleConfig) : RippleClient(config) {
     // Inherits all RippleClient methods
     
-    suspend fun trackReactive(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
+    suspend fun <T : RippleEvent> trackReactive(event: T)
+    suspend fun trackReactive(name: String, payload: Map<String, Any>? = null)
     fun getEventFlow(): Flow<Event>
     fun getEventFlux(): Flux<Event>
 }

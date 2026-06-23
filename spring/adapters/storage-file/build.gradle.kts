@@ -1,21 +1,8 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.serialization)
     `java-library`
     id("publishing-convention")
-}
-
-// Configure JAR name to match artifactId
-tasks.withType<Jar> {
-    archiveBaseName.set("spring-adapters-storage-file")
-}
-
-// Configure artifact name to avoid conflicts
-publishing {
-    publications {
-        named<MavenPublication>("maven") {
-            artifactId = "spring-adapters-storage-file"
-        }
-    }
 }
 
 dependencies {

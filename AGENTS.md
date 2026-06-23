@@ -66,19 +66,27 @@ Define type-safe events with compile-time validation:
 ```kotlin
 interface RippleEvent {
     val name: String
-    fun toPayload(): Map<String, Any>?
+    val schemaVersion: String?
+        get() = null
+    fun getPayload(): JsonObject?
 }
 
 // User implementation
 sealed class AppEvent : RippleEvent {
     data class UserLogin(val email: String, val method: String) : AppEvent() {
         override val name = "user.login"
-        override fun toPayload() = mapOf("email" to email, "method" to method)
+        override fun getPayload() = buildJsonObject {
+            put("email", email)
+            put("method", method)
+        }
     }
     
     data class Purchase(val orderId: String, val amount: Double) : AppEvent() {
         override val name = "purchase"
-        override fun toPayload() = mapOf("orderId" to orderId, "amount" to amount)
+        override fun getPayload() = buildJsonObject {
+            put("orderId", orderId)
+            put("amount", amount)
+        }
     }
 }
 
@@ -108,19 +116,16 @@ data class AppMetadata(
 
 // Type-safe metadata
 client.setMetadata(AppMetadata(userId = "123", version = "1.0.0"))
-client.track(event, AppMetadata(userId = "vip-user"))
 ```
 
 ### Track Method Overloads
 
 ```kotlin
 // Type-safe event
-fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
-fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+fun <T : RippleEvent> track(event: T)
 
 // Untyped event
-fun track(name: String, payload: Map<String, Any>? = null, metadata: Map<String, Any>? = null)
-fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
+fun track(name: String, payload: Map<String, Any>? = null, schemaVersion: String? = null)
 ```
 
 ## Core Module
@@ -134,26 +139,23 @@ abstract class RippleClient(protected val config: RippleConfig) {
     fun dispose()                                 // Clean shutdown, persist events, supports re-init
     
     // Type-safe event tracking
-    fun <T : RippleEvent> track(event: T, metadata: RippleMetadata? = null)
-    fun <T : RippleEvent> track(event: T, metadata: Map<String, Any>?)
+    fun <T : RippleEvent> track(event: T)
     
     // Untyped event tracking
-    fun track(name: String, payload: Map<String, Any>?, metadata: Map<String, Any>?)
-    fun track(name: String, payload: Map<String, Any>?, metadata: RippleMetadata)
+    fun track(name: String, payload: Map<String, Any>? = null, schemaVersion: String? = null)
     
     // Metadata management
     fun setMetadata(metadata: RippleMetadata)     // Type-safe
     fun setMetadata(key: String, value: Any)      // Untyped
-    fun getMetadata(): Map<String, Any>
-    fun removeMetadata(key: String)
+    fun getMetadata(): Map<String, Any>?
     fun clearMetadata()
     
-    // Session
-    fun getSessionId(): String?                   // Format: {timestamp}-{random}
+    // Identity
+    fun getAnonymousId(): String
+    fun getUserId(): String?
     
     // Flushing
     fun flush()                                   // Non-blocking
-    fun flushSync()                              // Blocking
     fun getQueueSize(): Int
     
     // Platform-specific
@@ -163,9 +165,8 @@ abstract class RippleClient(protected val config: RippleConfig) {
 
 **Key Implementation Details:**
 - Dispatcher is recreated on each `init()` call (supports re-initialization)
-- Session ID generated on `init()`, cleared on `dispose()`
+- Anonymous ID generated on `init()` and persisted by Android when constructed with a `Context`
 - Default logger is `ConsoleLoggerAdapter` with WARN level
-- Session ID format: `{timestamp}-{random}` (e.g., `1704567890123-456789`)
 
 ### Dispatcher (Queue Management)
 
@@ -219,7 +220,7 @@ class NoOpLoggerAdapter : LoggerAdapter
 ### Android Module
 
 ```kotlin
-class AndroidRippleClient(config: RippleConfig) : RippleClient(config) {
+class AndroidRippleClient(context: Context, config: RippleConfig) : RippleClient(config) {
     override fun getPlatform(): Platform.Native
 }
 ```
@@ -328,9 +329,7 @@ This implementation follows the [Ripple SDK API Contract](https://github.com/Tap
 |---------------------|--------|-------|
 | `init()` before `track()` | ✅ | Throws IllegalStateException |
 | Re-initialization after dispose | ✅ | Dispatcher recreated |
-| `getSessionId()` public | ✅ | Returns null before init |
 | `getMetadata()` method | ✅ | Returns shallow copy |
-| Session ID format | ✅ | `{timestamp}-{random}` |
 | Platform discriminated union | ✅ | Sealed class with Web/Native/Server |
 | 4xx no retry | ✅ | Immediate persist |
 | 5xx retry | ✅ | Exponential backoff |
@@ -344,32 +343,12 @@ This implementation follows the [Ripple SDK API Contract](https://github.com/Tap
 
 ## Changelog
 
-### v1.0.0-alpha.4 (2026-01-07)
-- **Added**: `RippleEvent` interface for type-safe event tracking
-- **Added**: `RippleMetadata` interface for type-safe metadata
-- **Added**: Multiple `track()` overloads for typed/untyped usage
-- **Changed**: Session ID now managed internally by base client
-- **Changed**: `dispose()` clears metadata and session ID
-- **Removed**: Generic type parameters from client classes
-
-### v1.0.0-alpha.3 (2026-01-07)
-- **Breaking**: Platform changed from data class to sealed class
-- **Breaking**: `getSessionId()` now public (was protected)
-- **Added**: `getMetadata()` method
-- **Added**: Re-initialization support after `dispose()`
-- **Added**: `ConsoleLoggerAdapter` and `NoOpLoggerAdapter`
-- **Added**: Concurrency tests
-- **Fixed**: 4xx errors no longer retry
-- **Fixed**: Failed events maintain FIFO order on requeue
-- **Fixed**: Jitter range corrected to 0-1000ms
-- **Fixed**: Session ID format changed to `{timestamp}-{random}`
-
-### v1.0.0-alpha.2
-- Modular adapter architecture
-- Room storage adapter
-- GitHub Actions CI/CD
-- Maven Central publishing setup
-
-### v1.0.0-alpha.1
-- Initial release
-- Core SDK with Android and Spring support
+### v2.0.0 (2026-06-20)
+- **Added**: Persistent anonymous and user identity support.
+- **Added**: Android-backed identity storage.
+- **Added**: Android automatic app-state tracking and Activity screen auto-fill.
+- **Added**: Automatic SDK telemetry reporting.
+- **Changed**: Cart-related predefined event payloads now use a nested `Cart` object.
+- **Changed**: Predefined event custom properties use `JsonObject`.
+- **Removed**: Session IDs and `getSessionId()`.
+- **Removed**: Legacy cart payload constructors that accepted top-level `cartId` or `products`.

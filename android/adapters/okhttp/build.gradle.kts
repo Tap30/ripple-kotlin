@@ -4,20 +4,6 @@ plugins {
     id("publishing-convention")
 }
 
-// Configure JAR name to match artifactId
-tasks.withType<Jar> {
-    archiveBaseName.set("android-adapters-okhttp")
-}
-
-// Configure artifact name
-publishing {
-    publications {
-        named<MavenPublication>("maven") {
-            artifactId = "android-adapters-okhttp"
-        }
-    }
-}
-
 dependencies {
     api(project(":core"))
     api(libs.okhttp)
