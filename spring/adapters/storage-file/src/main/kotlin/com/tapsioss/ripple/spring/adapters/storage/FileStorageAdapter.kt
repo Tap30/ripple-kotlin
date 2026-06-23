@@ -9,6 +9,8 @@ import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
 
+private data class StorageData(val events: List<Event>, val savedAt: Long)
+
 /**
  * File-based storage adapter for Spring applications.
  * 
@@ -17,10 +19,12 @@ import java.nio.file.Path
  * 
  * @param storagePath Path to the storage file (default: ripple_events.json in temp directory)
  * @param objectMapper Jackson ObjectMapper for JSON serialization
+ * @param ttl Time-to-live in milliseconds (default: null, no expiration)
  */
 class FileStorageAdapter(
     private val storagePath: Path = Files.createTempDirectory("ripple").resolve("events.json"),
-    private val objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
+    private val objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule(),
+    private val ttl: Long? = null
 ) : StorageAdapter {
     
     private val file: File = storagePath.toFile()
@@ -32,7 +36,8 @@ class FileStorageAdapter(
         synchronized(lock) {
             try {
                 file.parentFile?.mkdirs()
-                objectMapper.writeValue(file, events)
+                val data = StorageData(events, System.currentTimeMillis())
+                objectMapper.writeValue(file, data)
             } catch (e: Exception) {
                 // Silently fail
             }
@@ -43,7 +48,12 @@ class FileStorageAdapter(
         synchronized(lock) {
             return try {
                 if (!file.exists()) return emptyList()
-                objectMapper.readValue(file)
+                val data = objectMapper.readValue<StorageData>(file)
+                if (ttl != null && System.currentTimeMillis() - data.savedAt > ttl) {
+                    clear()
+                    return emptyList()
+                }
+                data.events
             } catch (e: Exception) {
                 emptyList()
             }

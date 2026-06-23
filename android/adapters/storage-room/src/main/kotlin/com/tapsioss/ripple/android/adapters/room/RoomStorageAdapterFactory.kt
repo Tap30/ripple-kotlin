@@ -30,11 +30,13 @@ object RoomStorageAdapterFactory {
      * 
      * @param context Android application context
      * @param databaseName Optional database name (default: "ripple_events.db")
+     * @param ttl Time-to-live in milliseconds (default: null, no expiration)
      * @return Configured Room storage adapter
      */
     fun create(
         context: Context,
-        databaseName: String = "ripple_events.db"
+        databaseName: String = "ripple_events.db",
+        ttl: Long? = null
     ): StorageAdapter {
         val database = Room.databaseBuilder(
             context = context.applicationContext,
@@ -44,16 +46,17 @@ object RoomStorageAdapterFactory {
         .fallbackToDestructiveMigration() //todo For simplicity in v1
         .build()
         
-        return RoomStorageAdapter(database)
+        return RoomStorageAdapter(database, ttl)
     }
     
     /**
      * Create a Room storage adapter with custom database configuration.
      * 
      * @param database Pre-configured Room database instance
+     * @param ttl Time-to-live in milliseconds (default: null, no expiration)
      * @return Room storage adapter using the provided database
      */
-    fun create(database: RippleDatabase): StorageAdapter {
-        return RoomStorageAdapter(database)
+    fun create(database: RippleDatabase, ttl: Long? = null): StorageAdapter {
+        return RoomStorageAdapter(database, ttl)
     }
 }
