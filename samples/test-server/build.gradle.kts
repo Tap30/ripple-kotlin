@@ -4,7 +4,7 @@ plugins {
 }
 
 application {
-    mainClass.set("com.tapsioss.ripple.testserver.MainKt")
+    mainClass.set("cab.tapsi.ripple.testserver.MainKt")
 }
 
 dependencies {

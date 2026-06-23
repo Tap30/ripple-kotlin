@@ -21,6 +21,5 @@ publish artifactory:
   script:
     - ./gradlew publishMavenPublicationToTapsiArtifactoryRepository --no-daemon
   only:
-    - merge_requests
     - tags
     - manual

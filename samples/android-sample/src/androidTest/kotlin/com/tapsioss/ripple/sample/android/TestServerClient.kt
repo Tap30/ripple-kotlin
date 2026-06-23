@@ -1,4 +1,4 @@
-package com.tapsioss.ripple.sample.android
+package cab.tapsi.ripple.sample.android
 
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient

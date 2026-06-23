@@ -4,20 +4,6 @@ plugins {
     id("publishing-convention")
 }
 
-// Configure JAR name to match artifactId
-tasks.withType<Jar> {
-    archiveBaseName.set("reactive-adapters-reactor")
-}
-
-// Configure artifact name to avoid conflicts
-publishing {
-    publications {
-        named<MavenPublication>("maven") {
-            artifactId = "reactive-adapters-reactor"
-        }
-    }
-}
-
 dependencies {
     api(project(":reactive:reactive-core"))
     implementation(libs.reactor.core)
