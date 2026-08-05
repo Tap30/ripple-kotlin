@@ -128,7 +128,7 @@ class RippleClientTest {
 
         client.clicked(ClickedPayload(elementId = "button"))
         client.viewed(ViewedPayload(elementId = "card"))
-        client.screen(ScreenPayload(title = "Home"))
+        client.screen(ScreenPayload(title = "Home", url = "https://example.test/home"))
         client.appOpened()
         client.appClosed()
 
@@ -145,7 +145,7 @@ class RippleClientTest {
         val client = TestRippleClient(testConfig(http = http, maxBatchSize = 1))
 
         client.events.productClicked(
-            ProductPayload(Product(productId = "p1", price = Money(amount = 10, currency = "IRR")))
+            ProductPayload(Product(productId = "p1", price = Money(amount = 10.0, currency = "IRR")))
         )
 
         eventually { http.requests.size == 1 }
@@ -153,27 +153,32 @@ class RippleClientTest {
     }
 
     @Test
-    fun `automatic telemetry reports dispatcher hook events to telemetry endpoint`() {
+    fun `automatic telemetry batches dispatcher hook events to telemetry endpoint`() {
         val http = RecordingHttpAdapter()
         val client = TestRippleClient(
             testConfig(
                 http = http,
-                maxBatchSize = 10,
-                telemetryOptions = TelemetryOptions(endpoint = "https://telemetry.example.test/events")
+                maxBatchSize = 1,
+                telemetryOptions = TelemetryOptions(
+                    endpoint = "https://telemetry.example.test/events",
+                    flushInterval = 60_000
+                )
             )
         )
 
-        client.track("telemetry.test")
+        client.track("telemetry.test.1")
+        client.track("telemetry.test.2")
+        eventually { http.requests.any { it.endpoint == "https://example.test/events" } }
+        client.dispose()
 
-        eventually { http.requests.any { it.endpoint == "https://telemetry.example.test/events" } }
-        val telemetryEvent = http.requests
+        assertTrue(http.requests.any { it.endpoint == "https://telemetry.example.test/events" })
+        val telemetryEvents = http.requests
             .first { it.endpoint == "https://telemetry.example.test/events" }
             .events
-            .single()
 
-        assertEquals("sdk_event_enqueue", telemetryEvent.name)
-        assertEquals(PREDEFINED_SCHEMA_VERSION, telemetryEvent.schemaVersion)
-        assertEquals(client.getAnonymousId(), telemetryEvent.anonymousId)
+        assertTrue(telemetryEvents.size >= 2)
+        assertTrue(telemetryEvents.none { it.name == "sdk_event_enqueue" })
+        assertTrue(telemetryEvents.all { it.schemaVersion == PREDEFINED_SCHEMA_VERSION })
     }
 
     @Test
@@ -212,11 +217,35 @@ class RippleClientTest {
         client.track("telemetry.hook")
 
         eventually {
-            enqueues.isNotEmpty() &&
-                http.requests.any { it.endpoint == "https://telemetry.example.test/events" }
+            enqueues.isNotEmpty()
         }
 
         assertEquals(EnqueueInfo(bufferSize = 1), enqueues.single())
+        assertTrue(http.requests.none { it.endpoint == "https://telemetry.example.test/events" })
+    }
+
+    @Test
+    fun `dispose flushes buffered telemetry`() {
+        val http = RecordingHttpAdapter()
+        val client = TestRippleClient(
+            testConfig(
+                http = http,
+                maxBatchSize = 1,
+                telemetryOptions = TelemetryOptions(
+                    endpoint = "https://telemetry.example.test/events",
+                    flushInterval = 60_000
+                )
+            )
+        )
+
+        client.track("telemetry.dispose")
+        eventually { http.requests.any { it.endpoint == "https://example.test/events" } }
+        client.dispose()
+
+        assertTrue(http.requests.any {
+            it.endpoint == "https://telemetry.example.test/events" &&
+                it.events.any { event -> event.name == "sdk_event_flush" }
+        })
     }
 
     @Test

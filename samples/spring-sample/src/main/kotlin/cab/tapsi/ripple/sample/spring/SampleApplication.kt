@@ -242,7 +242,7 @@ private fun trackPredefinedDemo(
     val product = Product(
         productId = "spring-sku-1",
         productTitle = "Spring demo subscription",
-        price = Money(amount = 990_000, currency = "IRR"),
+        price = Money(amount = 990_000.0, currency = "IRR"),
         category = Category(id = "subscription", title = "Subscription"),
         quantity = 1,
         customProperties = buildJsonObject {
@@ -252,27 +252,29 @@ private fun trackPredefinedDemo(
     )
     val coupon = Coupon(
         code = "SPRING10",
-        amount = Money(amount = 99_000, currency = "IRR")
+        amount = Money(amount = 99_000.0, currency = "IRR")
     )
     val order = Order(
         orderId = "spring-order-${System.currentTimeMillis()}",
         products = listOf(product),
-        revenue = Money(amount = 891_000, currency = "IRR"),
-        total = Money(amount = 891_000, currency = "IRR"),
+        totalValue = Money(amount = 891_000.0, currency = "IRR"),
         cartId = "spring-cart",
-        coupons = listOf(coupon),
         paymentMethod = "wallet"
     )
     val checkout = Checkout(
-        order = order,
+        order = CheckoutOrder(
+            products = order.products,
+            totalValue = order.totalValue,
+            cartId = order.cartId,
+            paymentMethod = order.paymentMethod
+        ),
         step = "payment",
         checkoutId = "spring-checkout"
     )
     val payment = Payment(
         paymentId = "spring-payment-${System.currentTimeMillis()}",
         method = "wallet",
-        value = Money(amount = 891_000, currency = "IRR"),
-        orderId = order.orderId
+        value = Money(amount = 891_000.0, currency = "IRR"),
     )
 
     rippleClient.identify(
@@ -288,6 +290,7 @@ private fun trackPredefinedDemo(
     rippleClient.screen(
         ScreenPayload(
             title = "Spring demo",
+            url = "https://sample.test/demo/predefined",
             pathname = "/demo/predefined",
             campaign = Campaign(source = "sample", medium = "server", name = "spring-demo")
         )
@@ -300,14 +303,14 @@ private fun trackPredefinedDemo(
         ProductListViewedPayload(
             products = listOf(product),
             listId = "spring_recommendations",
-            pagination = Pagination(page = 1, pageSize = 10, totalPages = 1)
+            pagination = Pagination(page = 1, limit = 10)
         )
     )
     rippleClient.events.productListFiltered(
         ProductListFilteredPayload(
             products = listOf(product),
             filters = listOf(Filter("billing_cycle", "monthly")),
-            sorts = listOf(Sort("created_at", "desc")),
+            sorts = listOf(Sort("created_at", SortDirection.DSC)),
             listId = "spring_recommendations"
         )
     )
@@ -315,34 +318,32 @@ private fun trackPredefinedDemo(
     val cart = Cart(cartId = "spring-cart", products = listOf(product))
     rippleClient.events.productAddedToCart(CartModificationPayload(product, cart))
     rippleClient.events.cartViewed(CartPayload(cart))
-    rippleClient.events.checkoutStarted(CheckoutPayload(checkout))
-    rippleClient.events.checkoutStepCompleted(CheckoutPayload(checkout))
-    rippleClient.events.couponEntered(CouponCheckoutPayload(coupon, checkout))
-    rippleClient.events.couponRedeemed(CouponOrderPayload(coupon, order))
-    rippleClient.events.paymentAuthorized(PaymentPayload(payment))
-    rippleClient.events.paymentCaptured(PaymentPayload(payment))
-    rippleClient.events.orderCompleted(OrderPayload(order))
+    rippleClient.events.checkoutStarted(CheckoutStartedPayload(checkout))
+    rippleClient.events.checkoutStepCompleted(CheckoutStepPayload(checkout))
+    rippleClient.events.couponEntered(CouponEnteredRemovedPayload(coupon, checkout))
+    rippleClient.events.paymentAuthorized(PaymentAuthorizedPayload(payment))
+    rippleClient.events.paymentCaptured(PaymentCapturedPayload(payment))
+    rippleClient.events.orderCompleted(OrderCompletedPayload(order))
     rippleClient.events.promotionClicked(PromotionPayload("spring-promo", promotionTitle = "Spring launch"))
     rippleClient.events.referralApplied(
-        ReferralPayload(
+        ReferralAppliedPayload(
             referral = Referral(referralCode = "SPRING-DEMO", referrerId = "spring-user-123"),
-            medium = "server",
             flow = source
         )
     )
     rippleClient.events.incentiveGranted(
-        IncentivePayload(
+        IncentiveGrantedPayload(
             incentive = Incentive(
                 incentiveId = "spring-incentive",
                 type = "credit",
-                reward = Reward(amount = 50_000, unit = "IRR")
+                reward = Reward(amount = 50_000.0, unit = "IRR")
             ),
             sourceId = order.orderId,
             sourceTitle = "Order completion"
         )
     )
     rippleClient.events.challengeCompleted(
-        ChallengePayload(
+        ChallengeCompletedPayload(
             challenge = Challenge(challengeId = "spring-challenge", challengeTitle = "Server onboarding")
         )
     )

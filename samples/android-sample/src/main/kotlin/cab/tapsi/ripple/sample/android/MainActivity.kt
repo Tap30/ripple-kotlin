@@ -260,7 +260,7 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
     val product = Product(
         productId = "sku-123",
         productTitle = "Ripple demo hoodie",
-        price = Money(amount = 590_000, currency = "IRR"),
+        price = Money(amount = 590_000.0, currency = "IRR"),
         category = Category(id = "apparel", title = "Apparel"),
         quantity = 1,
         position = 1,
@@ -272,13 +272,17 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
     val order = Order(
         orderId = "order-${System.currentTimeMillis()}",
         products = listOf(product),
-        revenue = Money(amount = 590_000, currency = "IRR"),
-        total = Money(amount = 590_000, currency = "IRR"),
+        totalValue = Money(amount = 590_000.0, currency = "IRR"),
         cartId = "cart-demo",
         paymentMethod = "card"
     )
     val checkout = Checkout(
-        order = order,
+        order = CheckoutOrder(
+            products = order.products,
+            totalValue = order.totalValue,
+            cartId = order.cartId,
+            paymentMethod = order.paymentMethod
+        ),
         step = "shipping",
         checkoutId = "checkout-demo"
     )
@@ -293,7 +297,7 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
             }
         )
     )
-    client.screen(ScreenPayload(title = "Android sample", pathname = "/android-sample"))
+    client.screen(ScreenPayload(title = "Android sample", url = "android://sample", pathname = "/android-sample"))
     client.clicked(ClickedPayload(elementId = "predefined_events_button", elementType = "button"))
     client.viewed(ViewedPayload(elementId = "demo_product_card", elementType = "product_card"))
     client.events.appStateChanged(
@@ -311,7 +315,7 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
         ProductListFilteredPayload(
             products = listOf(product),
             filters = listOf(Filter("size", "M")),
-            sorts = listOf(Sort("price", "asc")),
+            sorts = listOf(Sort("price", SortDirection.ASC)),
             listId = "home_featured"
         )
     )
@@ -321,28 +325,26 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
     val cart = Cart(cartId = "cart-demo", products = listOf(product))
     client.events.productAddedToCart(CartModificationPayload(product, cart))
     client.events.cartViewed(CartPayload(cart))
-    client.events.checkoutStarted(CheckoutPayload(checkout))
-    client.events.orderCompleted(OrderPayload(order))
+    client.events.checkoutStarted(CheckoutStartedPayload(checkout))
+    client.events.orderCompleted(OrderCompletedPayload(order))
     client.events.paymentAuthorized(
-        PaymentPayload(
+        PaymentAuthorizedPayload(
             Payment(
                 paymentId = "payment-demo",
                 method = "card",
-                value = Money(amount = 590_000, currency = "IRR"),
-                orderId = order.orderId
+                value = Money(amount = 590_000.0, currency = "IRR"),
             )
         )
     )
     client.events.promotionViewed(PromotionPayload(promotionId = "promo-demo", promotionTitle = "Demo campaign"))
     client.events.referralShared(
-        ReferralPayload(
+        ReferralSharedPayload(
             referral = Referral(referralCode = "ANDROID-DEMO", referrerId = "test-user-123"),
-            medium = "share_sheet",
-            flow = "sample"
+            medium = "share_sheet"
         )
     )
     client.events.challengeStarted(
-        ChallengePayload(
+        ChallengeStartedPayload(
             challenge = Challenge(challengeId = "challenge-demo", challengeTitle = "Sample onboarding")
         )
     )
