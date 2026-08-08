@@ -219,7 +219,10 @@ class Dispatcher(
                 config.hooks.onSendSuccess?.invoke(
                     SendSuccessInfo(batchSize = events.size, status = response.status)
                 )
-                loggerAdapter.info("Batch sent successfully")
+                loggerAdapter.info(
+                    "Batch sent successfully",
+                    mapOf("status" to response.status, "data" to response.data as String),
+                )
                 true
             }
 
