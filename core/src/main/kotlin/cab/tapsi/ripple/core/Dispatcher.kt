@@ -221,7 +221,7 @@ class Dispatcher(
                 )
                 loggerAdapter.info(
                     "Batch sent successfully",
-                    mapOf("status" to response.status, "data" to response.data as String),
+                    mapOf("status" to response.status, "data" to response.data as? String?),
                 )
                 true
             }
