@@ -8,25 +8,25 @@ class ConsoleLoggerAdapter(
     
     override fun debug(message: String, vararg args: Any?) {
         if (level <= LogLevel.DEBUG) {
-            println("[DEBUG] Ripple: $message")
+            println("[DEBUG] Ripple: ${LogMessageFormatter.format(message, *args)}")
         }
     }
     
     override fun info(message: String, vararg args: Any?) {
         if (level <= LogLevel.INFO) {
-            println("[INFO] Ripple: $message")
+            println("[INFO] Ripple: ${LogMessageFormatter.format(message, *args)}")
         }
     }
     
     override fun warn(message: String, vararg args: Any?) {
         if (level <= LogLevel.WARN) {
-            println("[WARN] Ripple: $message")
+            println("[WARN] Ripple: ${LogMessageFormatter.format(message, *args)}")
         }
     }
     
     override fun error(message: String, vararg args: Any?) {
         if (level <= LogLevel.ERROR) {
-            System.err.println("[ERROR] Ripple: $message")
+            System.err.println("[ERROR] Ripple: ${LogMessageFormatter.format(message, *args)}")
         }
     }
 }

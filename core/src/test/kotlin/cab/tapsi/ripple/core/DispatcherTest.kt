@@ -50,7 +50,7 @@ class DispatcherTest {
         val dispatcher = dispatcher(http = http, maxBatchSize = 1)
 
         dispatcher.flush(force = true)
-        eventually { dispatcher.getQueueSize() == 0 }
+        assertEquals(0, dispatcher.getQueueSize())
         dispatcher.dispose()
         dispatcher.flush(force = true)
 
@@ -360,7 +360,7 @@ class DispatcherTest {
 
         dispatcher.enqueue(event("sampled"))
 
-        assertEquals(0, dispatcher.getQueueSize())
+        eventually { dispatcher.getQueueSize() == 0 }
         assertEquals(0, http.requests.size)
         assertEquals(DropInfo(eventCount = 1, reason = DropReason.SAMPLED), drops.single())
 

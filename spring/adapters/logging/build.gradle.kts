@@ -11,6 +11,7 @@ dependencies {
     testImplementation(libs.junit.jupiter)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(kotlin("test"))
 }
 
 tasks.withType<Test> {

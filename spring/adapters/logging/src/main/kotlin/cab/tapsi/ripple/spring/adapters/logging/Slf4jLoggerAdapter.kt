@@ -1,6 +1,7 @@
 package cab.tapsi.ripple.spring.adapters.logging
 
 import cab.tapsi.ripple.core.adapters.LogLevel
+import cab.tapsi.ripple.core.adapters.LogMessageFormatter
 import cab.tapsi.ripple.core.adapters.LoggerAdapter
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -15,25 +16,25 @@ class Slf4jLoggerAdapter @JvmOverloads constructor(
     
     override fun debug(message: String, vararg args: Any?) {
         if (logLevel <= LogLevel.DEBUG && logger.isDebugEnabled) {
-            logger.debug(message, *args)
+            logger.debug(LogMessageFormatter.format(message, *args))
         }
     }
 
     override fun info(message: String, vararg args: Any?) {
         if (logLevel <= LogLevel.INFO && logger.isInfoEnabled) {
-            logger.info(message, *args)
+            logger.info(LogMessageFormatter.format(message, *args))
         }
     }
 
     override fun warn(message: String, vararg args: Any?) {
         if (logLevel <= LogLevel.WARN && logger.isWarnEnabled) {
-            logger.warn(message, *args)
+            logger.warn(LogMessageFormatter.format(message, *args))
         }
     }
 
     override fun error(message: String, vararg args: Any?) {
         if (logLevel <= LogLevel.ERROR && logger.isErrorEnabled) {
-            logger.error(message, *args)
+            logger.error(LogMessageFormatter.format(message, *args))
         }
     }
 }
