@@ -85,8 +85,6 @@ class Dispatcher(
         }
 
         if (config.eventSampler?.invoke(event) == false) {
-            config.hooks.onDrop?.invoke(DropInfo(eventCount = 1, reason = DropReason.SAMPLED))
-            loggerAdapter.debug("Event sampled out: ${event.name}")
             return
         }
 
