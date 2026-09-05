@@ -137,6 +137,11 @@ class RippleClientTest {
             listOf("clicked", "viewed", "screened", "app_state_changed", "app_state_changed"),
             http.requests.flatMap { it.events }.map { it.name }
         )
+        val appStateEvents = http.requests.flatMap { it.events }.filter { it.name == "app_state_changed" }
+        assertEquals("opened", appStateEvents[0].payload?.get("newState")?.jsonPrimitive?.content)
+        assertEquals("closed", appStateEvents[0].payload?.get("previousState")?.jsonPrimitive?.content)
+        assertEquals("closed", appStateEvents[1].payload?.get("newState")?.jsonPrimitive?.content)
+        assertEquals("opened", appStateEvents[1].payload?.get("previousState")?.jsonPrimitive?.content)
     }
 
     @Test

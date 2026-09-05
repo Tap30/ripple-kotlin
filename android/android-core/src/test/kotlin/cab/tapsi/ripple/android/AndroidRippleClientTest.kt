@@ -13,12 +13,10 @@ import cab.tapsi.ripple.core.RippleConfig
 import cab.tapsi.ripple.core.adapters.HttpAdapter
 import cab.tapsi.ripple.core.adapters.LoggerAdapter
 import cab.tapsi.ripple.core.adapters.StorageAdapter
-import io.mockk.CapturingSlot
 import io.mockk.every
 import io.mockk.just
 import io.mockk.mockk
 import io.mockk.runs
-import io.mockk.slot
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -73,32 +71,18 @@ class AndroidRippleClientTest {
     }
 
     @Test
-    fun `android lifecycle callbacks track foreground and background app states`() {
+    fun `android client does not automatically track activity lifecycle app states`() {
         val prefs = sharedPreferences()
         val application = mockk<Application>()
         every { application.applicationContext } returns application
         every { application.getSharedPreferences(any(), any()) } returns prefs
-        val callbackSlot: CapturingSlot<Application.ActivityLifecycleCallbacks> = slot()
-        every { application.registerActivityLifecycleCallbacks(capture(callbackSlot)) } just runs
-        every { application.unregisterActivityLifecycleCallbacks(any()) } just runs
         val http = RecordingHttpAdapter()
         val client = AndroidRippleClient<DefaultRippleEvent, DefaultRippleMetadata>(
             application,
             config(http)
         )
-        val activity = mockk<Activity>(relaxed = true)
-
         client.init()
-        callbackSlot.captured.onActivityStarted(activity)
-        callbackSlot.captured.onActivityStopped(activity)
-
-        eventually { http.requests.flatMap { it.events }.size >= 2 }
-        val events = http.requests.flatMap { it.events }
-
-        assertEquals(listOf("app_state_changed", "app_state_changed"), events.map { it.name })
-        assertEquals("foreground", events[0].payload?.get("newState")?.jsonPrimitive?.content)
-        assertEquals("background", events[1].payload?.get("newState")?.jsonPrimitive?.content)
-
+        assertEquals(0, http.requests.flatMap { it.events }.size)
         client.dispose()
     }
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Deprecated `FOREGROUND` and `BACKGROUND` app states. Explicit use still sends the event and logs a warning; use `OPENED` or `CLOSED` instead.
+- Removed automatic Android foreground/background lifecycle tracking. Use `appOpened()` and `appClosed()` to track app lifecycle explicitly.
+
 ## [2.0.0] - 2026-06-20
 
 ### Added

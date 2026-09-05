@@ -1,12 +1,8 @@
 package cab.tapsi.ripple.android
 
 import android.app.Activity
-import android.app.Application
 import android.content.Context
 import android.os.Build
-import android.os.Bundle
-import cab.tapsi.ripple.core.AppState
-import cab.tapsi.ripple.core.AppStateChangedPayload
 import cab.tapsi.ripple.core.DefaultRippleEvent
 import cab.tapsi.ripple.core.DefaultRippleMetadata
 import cab.tapsi.ripple.core.DeviceInfo
@@ -48,24 +44,7 @@ class AndroidRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
         appContext?.getSharedPreferences(PREFERENCES_NAME, Context.MODE_PRIVATE)
     }
 
-    private val application: Application?
-        get() = appContext?.applicationContext as? Application
-
-    private var lifecycleCallbacks: Application.ActivityLifecycleCallbacks? = null
-    private var startedActivityCount: Int = 0
-    private var lastAppState: AppState? = null
-
     override fun getPlatform(): Platform = platformInfo
-
-    override fun init() {
-        super.init()
-        registerAppStateTracking()
-    }
-
-    override fun dispose() {
-        unregisterAppStateTracking()
-        super.dispose()
-    }
 
     override fun loadAnonymousId(): String? = preferences?.getString(KEY_ANONYMOUS_ID, null)
 
@@ -100,53 +79,6 @@ class AndroidRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
                 customProperties = payload?.customProperties
             )
         )
-    }
-
-    private fun registerAppStateTracking() {
-        val application = application ?: return
-        if (lifecycleCallbacks != null) return
-
-        lifecycleCallbacks = object : Application.ActivityLifecycleCallbacks {
-            override fun onActivityStarted(activity: Activity) {
-                startedActivityCount++
-                if (startedActivityCount == 1) {
-                    trackAppState(AppState.FOREGROUND)
-                }
-            }
-
-            override fun onActivityStopped(activity: Activity) {
-                startedActivityCount = (startedActivityCount - 1).coerceAtLeast(0)
-                if (startedActivityCount == 0) {
-                    trackAppState(AppState.BACKGROUND)
-                }
-            }
-
-            override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
-            override fun onActivityResumed(activity: Activity) = Unit
-            override fun onActivityPaused(activity: Activity) = Unit
-            override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
-            override fun onActivityDestroyed(activity: Activity) = Unit
-        }
-        application.registerActivityLifecycleCallbacks(lifecycleCallbacks)
-    }
-
-    private fun unregisterAppStateTracking() {
-        val application = application ?: return
-        lifecycleCallbacks?.let(application::unregisterActivityLifecycleCallbacks)
-        lifecycleCallbacks = null
-        startedActivityCount = 0
-    }
-
-    private fun trackAppState(newState: AppState) {
-        if (lastAppState == newState) return
-
-        events.appStateChanged(
-            AppStateChangedPayload(
-                newState = newState,
-                previousState = lastAppState
-            )
-        )
-        lastAppState = newState
     }
 
     companion object {
