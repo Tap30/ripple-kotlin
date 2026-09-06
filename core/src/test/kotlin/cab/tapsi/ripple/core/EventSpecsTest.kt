@@ -181,11 +181,42 @@ class EventSpecsTest {
 
     @Test
     fun `app state serializes with declared serial name`() {
+        @Suppress("DEPRECATION")
         val payload = AppStateChangedPayload(newState = AppState.FOREGROUND, previousState = AppState.BACKGROUND)
             .toJsonPayload()
 
         assertEquals("foreground", payload["newState"]?.jsonPrimitive?.content)
         assertEquals("background", payload["previousState"]?.jsonPrimitive?.content)
+    }
+
+    @Test
+    fun `legacy app states emit deprecation warnings`() {
+        val logger = RecordingLoggerAdapter()
+        val client = TestRippleClient(testConfig(logger = logger))
+
+        @Suppress("DEPRECATION")
+        client.events.appStateChanged(AppStateChangedPayload(newState = AppState.FOREGROUND))
+        @Suppress("DEPRECATION")
+        client.events.appStateChanged(AppStateChangedPayload(newState = AppState.BACKGROUND))
+
+        assertEquals(
+            listOf(
+                "AppState \"foreground\" is deprecated. Use \"opened\" or \"closed\" instead.",
+                "AppState \"background\" is deprecated. Use \"opened\" or \"closed\" instead."
+            ),
+            logger.logs.filter { it.level == "warn" }.map { it.message }
+        )
+    }
+
+    @Test
+    fun `opened and closed app states do not emit deprecation warnings`() {
+        val logger = RecordingLoggerAdapter()
+        val client = TestRippleClient(testConfig(logger = logger))
+
+        client.events.appStateChanged(AppStateChangedPayload(newState = AppState.OPENED))
+        client.events.appStateChanged(AppStateChangedPayload(newState = AppState.CLOSED))
+
+        assertFalse(logger.logs.any { it.level == "warn" })
     }
 
     @Test

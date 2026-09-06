@@ -47,7 +47,8 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     private var dispatcher: Dispatcher? = null
     private var anonymousId: String = ""
     private var userId: String? = null
-    val events: EventsNamespace = EventsNamespace(this)
+    private var appState: AppState = AppState.CLOSED
+    val events: EventsNamespace = EventsNamespace(this, loggerAdapter)
     
     @Volatile
     protected var isInitialized = false
@@ -168,11 +169,20 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     }
 
     fun appOpened() {
-        trackPredefined("app_state_changed", AppStateChangedPayload(AppState.OPENED).toJsonPayload())
+        trackAppStateChange(AppState.OPENED)
     }
 
     fun appClosed() {
-        trackPredefined("app_state_changed", AppStateChangedPayload(AppState.CLOSED).toJsonPayload())
+        trackAppStateChange(AppState.CLOSED)
+    }
+
+    private fun trackAppStateChange(newState: AppState) {
+        val previousState = appState
+        appState = newState
+        trackPredefined(
+            "app_state_changed",
+            AppStateChangedPayload(newState, previousState).toJsonPayload()
+        )
     }
 
     // ==================== METADATA METHODS ====================

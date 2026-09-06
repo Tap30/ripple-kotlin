@@ -188,9 +188,17 @@ enum class AppState {
     CLOSED,
 
     @SerialName("foreground")
+    @Deprecated(
+        message = "Foreground app state is deprecated. Use OPENED or CLOSED instead.",
+        replaceWith = ReplaceWith("AppState.OPENED")
+    )
     FOREGROUND,
 
     @SerialName("background")
+    @Deprecated(
+        message = "Background app state is deprecated. Use OPENED or CLOSED instead.",
+        replaceWith = ReplaceWith("AppState.CLOSED")
+    )
     BACKGROUND
 }
 
@@ -411,7 +419,8 @@ data class ChallengePayload(
 ) : PayloadConvertible
 
 class EventsNamespace internal constructor(
-    private val client: RippleClient<out RippleEvent, out RippleMetadata>
+    private val client: RippleClient<out RippleEvent, out RippleMetadata>,
+    private val logger: cab.tapsi.ripple.core.adapters.LoggerAdapter
 ) {
     private inline fun <reified T : PayloadConvertible> track(
         name: String,
@@ -454,7 +463,19 @@ class EventsNamespace internal constructor(
     fun paymentCaptured(payload: PaymentPayload) = track("payment_captured", payload)
     fun paymentFailed(payload: PaymentPayload) = track("payment_failed", payload)
     fun paymentRefunded(payload: PaymentPayload) = track("payment_refunded", payload)
-    fun appStateChanged(payload: AppStateChangedPayload) = track("app_state_changed", payload)
+    @Suppress("DEPRECATION")
+    fun appStateChanged(payload: AppStateChangedPayload) {
+        when (payload.newState) {
+            AppState.FOREGROUND -> logger.warn(
+                "AppState \"foreground\" is deprecated. Use \"opened\" or \"closed\" instead."
+            )
+            AppState.BACKGROUND -> logger.warn(
+                "AppState \"background\" is deprecated. Use \"opened\" or \"closed\" instead."
+            )
+            else -> Unit
+        }
+        track("app_state_changed", payload)
+    }
     fun referralShared(payload: ReferralPayload) = track("referral_shared", payload)
     fun referralApplied(payload: ReferralPayload) = track("referral_applied", payload)
     fun incentiveGranted(payload: IncentivePayload) = track("incentive_granted", payload)
