@@ -86,7 +86,7 @@ jobs:
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
     
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         name: Ripple Kotlin ${{ steps.version.outputs.version }}
         generate_release_notes: true
