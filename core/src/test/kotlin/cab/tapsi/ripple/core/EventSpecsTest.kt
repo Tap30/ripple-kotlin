@@ -7,6 +7,23 @@ import kotlin.test.assertFalse
 
 class EventSpecsTest {
     @Test
+    fun `checkout order excludes identifiers from its serialized payload`() {
+        val payload = Checkout(
+            order = CheckoutOrder(
+                products = emptyList(),
+                revenue = Money(amount = 0, currency = "IRR"),
+                total = Money(amount = 0, currency = "IRR")
+            ),
+            step = "payment"
+        ).toJsonPayload()
+
+        val order = payload["order"]!!.jsonObject
+        assertFalse(order.containsKey("orderId"))
+        assertFalse(order.containsKey("transactionId"))
+        assertFalse(order.containsKey("checkoutId"))
+    }
+
+    @Test
     fun `events namespace supports all event categories`() {
         val http = RecordingHttpAdapter()
         val client = TestRippleClient(testConfig(http = http, maxBatchSize = 1))
@@ -22,9 +39,14 @@ class EventSpecsTest {
             revenue = Money(amount = 0, currency = ""),
             total = Money(amount = 0, currency = "")
         )
+        val checkoutOrder = CheckoutOrder(
+            products = emptyList(),
+            revenue = Money(amount = 0, currency = ""),
+            total = Money(amount = 0, currency = "")
+        )
         val checkout = Checkout(
             step = "0",
-            order = order
+            order = checkoutOrder
         )
         val coupon = Coupon(
             amount = Money(amount = 0, currency = ""),
@@ -283,8 +305,7 @@ class EventSpecsTest {
         val couponPayload = CouponCheckoutPayload(
             coupon = coupon,
             checkout = Checkout(
-                order = Order(
-                    orderId = "o1",
+                order = CheckoutOrder(
                     products = emptyList(),
                     revenue = Money(amount = 0, currency = "IRR"),
                     total = Money(amount = 0, currency = "IRR")

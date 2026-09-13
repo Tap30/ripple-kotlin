@@ -278,7 +278,13 @@ private fun trackPredefinedDemo(client: AndroidRippleClient<AppEvent, AppMetadat
         paymentMethod = "card"
     )
     val checkout = Checkout(
-        order = order,
+        order = CheckoutOrder(
+            products = order.products,
+            revenue = order.revenue,
+            total = order.total,
+            cartId = order.cartId,
+            paymentMethod = order.paymentMethod
+        ),
         step = "shipping",
         checkoutId = "checkout-demo"
     )

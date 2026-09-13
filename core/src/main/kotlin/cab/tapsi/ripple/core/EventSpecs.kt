@@ -96,6 +96,29 @@ data class Order(
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
+/**
+ * The order details collected during checkout.
+ *
+ * Checkout, transaction, and order identifiers are assigned after checkout, so they are not
+ * part of this representation.
+ */
+@Serializable
+data class CheckoutOrder(
+    val products: List<Product>,
+    val revenue: Money,
+    val total: Money,
+    val cartId: String? = null,
+    val totalDiscount: Money? = null,
+    val subtotalValue: Money? = null,
+    val shipping: Shipping? = null,
+    val tax: Money? = null,
+    val coupons: List<Coupon>? = null,
+    val discount: Money? = null,
+    val paymentMethod: String? = null,
+    val incentives: List<Incentive>? = null,
+    val customProperties: JsonObject? = null
+) : PayloadConvertible
+
 @Serializable
 data class Cart(
     val cartId: String? = null,
@@ -105,7 +128,7 @@ data class Cart(
 
 @Serializable
 data class Checkout(
-    val order: Order,
+    val order: CheckoutOrder,
     val step: String,
     val checkoutId: String? = null,
     val customProperties: JsonObject? = null

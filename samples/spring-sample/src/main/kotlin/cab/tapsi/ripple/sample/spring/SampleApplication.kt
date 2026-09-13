@@ -264,7 +264,14 @@ private fun trackPredefinedDemo(
         paymentMethod = "wallet"
     )
     val checkout = Checkout(
-        order = order,
+        order = CheckoutOrder(
+            products = order.products,
+            revenue = order.revenue,
+            total = order.total,
+            cartId = order.cartId,
+            coupons = order.coupons,
+            paymentMethod = order.paymentMethod
+        ),
         step = "payment",
         checkoutId = "spring-checkout"
     )
