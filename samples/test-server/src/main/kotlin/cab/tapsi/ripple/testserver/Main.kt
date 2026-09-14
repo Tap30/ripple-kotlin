@@ -36,7 +36,7 @@ fun main() {
 
             get("/events") {
                 call.respondText(
-                    Json.encodeToString(JsonArray(events)),
+                    Json.encodeToString(JsonArray.serializer(), JsonArray(events)),
                     ContentType.Application.Json
                 )
             }

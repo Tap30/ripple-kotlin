@@ -488,7 +488,7 @@ class Dispatcher(
 
     private fun serializedSize(event: Event): Long {
         return runCatching {
-            json.encodeToString(event).toByteArray(Charsets.UTF_8).size.toLong()
+            json.encodeToString(Event.serializer(), event).toByteArray(Charsets.UTF_8).size.toLong()
         }.getOrElse {
             event.toString().toByteArray(Charsets.UTF_8).size.toLong()
         }

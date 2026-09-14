@@ -13,12 +13,16 @@ concurrency:
 
 jobs:
   test:
-    name: "Test"
+    name: "Test (Kotlin ${{ matrix.kotlin-version }})"
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        kotlin-version: ["1.9.22", "2.0.21"]
     
     steps:
     - name: Checkout
@@ -41,17 +45,22 @@ jobs:
         build-scan-terms-of-use-agree: "yes"
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      if: matrix.kotlin-version == '2.0.21'
+      uses: android-actions/setup-android@v4
+      with:
+        packages: platform-tools
 
     - name: Run tests
-      run: ./gradlew test --no-daemon
+      run: >
+        ./gradlew test --no-daemon
+        -PkotlinVersion=${{ matrix.kotlin-version }}
       timeout-minutes: 30
     
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
+        name: test-results-kotlin-${{ matrix.kotlin-version }}
         path: '**/build/test-results/test/TEST-*.xml'
         retention-days: 7
     
@@ -59,6 +68,6 @@ jobs:
       uses: actions/upload-artifact@v4
       if: success()
       with:
-        name: build-artifacts
+        name: build-artifacts-kotlin-${{ matrix.kotlin-version }}
         path: '**/build/libs/*.jar'
         retention-days: 7

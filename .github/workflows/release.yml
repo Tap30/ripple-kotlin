@@ -61,26 +61,65 @@ jobs:
         build-scan-terms-of-use-agree: "yes"
 
     - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+      uses: android-actions/setup-android@v4
+      with:
+        packages: platform-tools
 
-    - name: Build and publish to Maven Central
+    - name: Build and publish Kotlin 1.9 JVM artifacts to Maven Central
       run: >
         ./gradlew
         build
         publishToSonatype
         closeAndReleaseSonatypeStagingRepository
         --no-daemon
+        -PkotlinVersion=1.9.22
+        -PkotlinArtifactSuffix=-kotlin19
       env:
         CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
         CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
 
-    - name: Publish to GitHub Packages
+    - name: Upload Kotlin 1.9 test results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: kotlin19-test-results
+        path: '**/build/test-results/test/TEST-*.xml'
+        if-no-files-found: warn
+        retention-days: 7
+
+    - name: Build and publish Kotlin 2 artifacts to Maven Central
+      run: >
+        ./gradlew
+        build
+        publishToSonatype
+        closeAndReleaseSonatypeStagingRepository
+        --no-daemon
+        -PkotlinVersion=2.0.21
+      env:
+        CENTRAL_PORTAL_USERNAME: ${{ secrets.CENTRAL_PORTAL_USERNAME }}
+        CENTRAL_PORTAL_PASSWORD: ${{ secrets.CENTRAL_PORTAL_PASSWORD }}
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+    - name: Publish Kotlin 1.9 JVM artifacts to GitHub Packages
       run: >
         ./gradlew
         publishMavenPublicationToGitHubPackagesRepository
         --no-daemon
+        -PkotlinVersion=1.9.22
+        -PkotlinArtifactSuffix=-kotlin19
+      env:
+        SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+        SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+
+    - name: Publish Kotlin 2 artifacts to GitHub Packages
+      run: >
+        ./gradlew
+        publishMavenPublicationToGitHubPackagesRepository
+        --no-daemon
+        -PkotlinVersion=2.0.21
       env:
         SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
         SIGNING_PASSWORD: ${{ secrets.SIGNING_PASSWORD }}

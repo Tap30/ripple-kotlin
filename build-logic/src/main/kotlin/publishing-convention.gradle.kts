@@ -55,7 +55,8 @@ fun Project.rippleArtifactId(): String {
     } else {
         name
     }
-    return "ripple-$baseName"
+    val kotlinArtifactSuffix = providers.gradleProperty("kotlinArtifactSuffix").orNull.orEmpty()
+    return "ripple-$baseName$kotlinArtifactSuffix"
 }
 
 fun MavenPublication.configureRipplePom() {

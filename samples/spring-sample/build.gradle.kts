@@ -1,6 +1,6 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
-    alias(libs.plugins.kotlin.spring)
+    id("org.jetbrains.kotlin.jvm")
+    id("org.jetbrains.kotlin.plugin.spring")
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.spring.dependency.management)
 }

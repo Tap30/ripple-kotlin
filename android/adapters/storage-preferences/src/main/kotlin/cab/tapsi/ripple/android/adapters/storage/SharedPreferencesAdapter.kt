@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import cab.tapsi.ripple.core.Event
 import cab.tapsi.ripple.core.adapters.StorageAdapter
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable

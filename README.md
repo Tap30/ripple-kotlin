@@ -1,5 +1,22 @@
 # Ripple Kotlin SDK
 
+## Kotlin compatibility
+
+The JVM-facing SDK modules are built and tested with Kotlin 1.9.22 and Kotlin
+2.0.21. Kotlin 2.0.21 is the default development toolchain and keeps the
+existing artifact names (for example, `ripple-core`). Kotlin 1.9.22 JVM
+artifacts are published alongside them with a `-kotlin19` suffix (for example,
+`ripple-core-kotlin19`). To validate the Kotlin 1.9-compatible modules locally,
+run:
+
+```bash
+./gradlew test -PkotlinVersion=1.9.22
+```
+
+Android requires Kotlin 2 because its Room/KSP and Compose toolchain is Kotlin
+2-based. All Android SDK modules and the Android sample are therefore excluded
+from Kotlin 1.9 builds.
+
 A high-performance event tracking SDK for Kotlin and Java applications.
 
 [![Build](https://github.com/Tap30/ripple-kotlin/actions/workflows/build.yml/badge.svg)](https://github.com/Tap30/ripple-kotlin/actions/workflows/build.yml)
