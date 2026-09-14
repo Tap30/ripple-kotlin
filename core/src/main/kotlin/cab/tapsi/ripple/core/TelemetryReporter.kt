@@ -23,8 +23,8 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_flush",
             payload = buildJsonObject {
-                put("eventCount", info.eventCount)
-                put("batchCount", info.batchCount)
+                put("eventCount", info.eventCount.toDouble())
+                put("batchCount", info.batchCount.toDouble())
             }
         )
     }
@@ -33,8 +33,8 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_send_success",
             payload = buildJsonObject {
-                put("batchSize", info.batchSize)
-                put("status", info.status)
+                put("batchSize", info.batchSize.toDouble())
+                put("status", info.status.toDouble())
             }
         )
     }
@@ -43,9 +43,9 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_send_failure",
             payload = buildJsonObject {
-                put("batchSize", info.batchSize)
+                put("batchSize", info.batchSize.toDouble())
                 put("error", info.error)
-                put("attempt", info.attempt)
+                put("attempt", info.attempt.toDouble())
             }
         )
     }
@@ -54,8 +54,8 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_retry",
             payload = buildJsonObject {
-                put("attempt", info.attempt)
-                put("delay", info.delay)
+                put("attempt", info.attempt.toDouble())
+                put("delay", info.delay.toDouble())
             }
         )
     }
@@ -64,8 +64,11 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_drop",
             payload = buildJsonObject {
-                put("eventCount", info.eventCount)
-                put("reason", info.reason.name.lowercase())
+                put("eventCount", info.eventCount.toDouble())
+                put(
+                    "reason",
+                    if (info.reason == DropReason.BUFFER_FULL) "client_error" else info.reason.name.lowercase()
+                )
             }
         )
     }
@@ -74,7 +77,7 @@ internal class TelemetryReporter(
         report(
             name = "sdk_event_enqueue",
             payload = buildJsonObject {
-                put("bufferSize", info.bufferSize)
+                put("bufferSize", info.bufferSize.toDouble())
             }
         )
     }

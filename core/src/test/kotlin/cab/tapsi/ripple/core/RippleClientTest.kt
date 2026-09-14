@@ -128,7 +128,7 @@ class RippleClientTest {
 
         client.clicked(ClickedPayload(elementId = "button"))
         client.viewed(ViewedPayload(elementId = "card"))
-        client.screen(ScreenPayload(title = "Home"))
+        client.screen(ScreenPayload(title = "Home", url = "https://example.test/home"))
         client.appOpened()
         client.appClosed()
 
@@ -150,7 +150,7 @@ class RippleClientTest {
         val client = TestRippleClient(testConfig(http = http, maxBatchSize = 1))
 
         client.events.productClicked(
-            ProductPayload(Product(productId = "p1", price = Money(amount = 10, currency = "IRR")))
+            ProductClickedPayload(Product(productId = "p1", price = Money(amount = 10.0, currency = "IRR")))
         )
 
         eventually { http.requests.size == 1 }

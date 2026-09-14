@@ -11,8 +11,7 @@ class EventSpecsTest {
         val payload = Checkout(
             order = CheckoutOrder(
                 products = emptyList(),
-                revenue = Money(amount = 0, currency = "IRR"),
-                total = Money(amount = 0, currency = "IRR")
+                totalValue = Money(amount = 0.0, currency = "IRR")
             ),
             step = "payment"
         ).toJsonPayload()
@@ -30,37 +29,35 @@ class EventSpecsTest {
         val events = client.events
 
         val product = Product(
-            price = Money(amount = 0, currency = ""),
+            price = Money(amount = 0.0, currency = ""),
             productId = ""
         )
         val order = Order(
             orderId = "",
             products = emptyList(),
-            revenue = Money(amount = 0, currency = ""),
-            total = Money(amount = 0, currency = "")
+            totalValue = Money(amount = 0.0, currency = "")
         )
         val checkoutOrder = CheckoutOrder(
             products = emptyList(),
-            revenue = Money(amount = 0, currency = ""),
-            total = Money(amount = 0, currency = "")
+            totalValue = Money(amount = 0.0, currency = "")
         )
         val checkout = Checkout(
             step = "0",
             order = checkoutOrder
         )
         val coupon = Coupon(
-            amount = Money(amount = 0, currency = ""),
+            amount = Money(amount = 0.0, currency = ""),
             code = ""
         )
         val payment = Payment(
-            value = Money(amount = 0, currency = ""),
+            value = Money(amount = 0.0, currency = ""),
             method = "",
             paymentId = ""
         )
         val referral = Referral(referralCode = "")
         val incentive = Incentive(
             incentiveId = "",
-            reward = Reward(amount = 0, unit = ""),
+            reward = Reward(amount = 0.0, unit = ""),
             type = ""
         )
         val challenge = Challenge(challengeId = "")
@@ -68,9 +65,9 @@ class EventSpecsTest {
 
         val methods = listOf<Pair<String, EventsNamespace.() -> Unit>>(
             "app_state_changed" to { appStateChanged(AppStateChangedPayload(newState = AppState.FOREGROUND)) },
-            "product_clicked" to { productClicked(ProductPayload(product)) },
-            "product_viewed" to { productViewed(ProductPayload(product)) },
-            "product_shared" to { productShared(ProductSharePayload(product)) },
+            "product_clicked" to { productClicked(ProductClickedPayload(product)) },
+            "product_viewed" to { productViewed(ProductViewedPayload(product)) },
+            "product_shared" to { productShared(ProductSharedPayload(product)) },
             "products_searched" to { productsSearched(ProductsSearchedPayload(query = "test")) },
             "product_list_viewed" to { productListViewed(ProductListViewedPayload(products = emptyList())) },
             "product_list_filtered" to {
@@ -87,7 +84,7 @@ class EventSpecsTest {
                     ProductReviewedPayload(
                         product = product,
                         reviewId = "1",
-                        rating = 5
+                        rating = 5.0
                     )
                 )
             },
@@ -95,25 +92,25 @@ class EventSpecsTest {
             "product_removed_from_wishlist" to { productRemovedFromWishlist(ProductWishlistPayload(product)) },
             "product_added_to_cart" to { productAddedToCart(CartModificationPayload(product, cart)) },
             "product_removed_from_cart" to { productRemovedFromCart(CartModificationPayload(product, cart)) },
-            "cart_viewed" to { cartViewed(CartPayload(cart)) },
-            "cart_emptied" to { cartEmptied(CartPayload(cart)) },
-            "checkout_started" to { checkoutStarted(CheckoutPayload(checkout)) },
-            "checkout_step_viewed" to { checkoutStepViewed(CheckoutPayload(checkout)) },
-            "checkout_step_completed" to { checkoutStepCompleted(CheckoutPayload(checkout)) },
-            "order_completed" to { orderCompleted(OrderPayload(order)) },
-            "order_failed" to { orderFailed(OrderPayload(order, reason = "err")) },
-            "order_cancelled" to { orderCancelled(OrderPayload(order)) },
-            "order_shipped" to { orderShipped(OrderPayload(order)) },
-            "order_refunded" to { orderRefunded(OrderPayload(order)) },
-            "order_updated" to { orderUpdated(OrderPayload(order)) },
-            "order_product_fulfilled" to { orderProductFulfilled(OrderProductPayload(order, product)) },
+            "cart_viewed" to { cartViewed(CartViewedPayload(cart)) },
+            "cart_emptied" to { cartEmptied(CartEmptiedPayload(cart)) },
+            "checkout_started" to { checkoutStarted(CheckoutStartedPayload(checkout)) },
+            "checkout_step_viewed" to { checkoutStepViewed(CheckoutStepPayload(checkout)) },
+            "checkout_step_completed" to { checkoutStepCompleted(CheckoutStepPayload(checkout)) },
+            "order_completed" to { orderCompleted(OrderCompletedPayload(order)) },
+            "order_failed" to { orderFailed(OrderFailedPayload(order, reason = "err")) },
+            "order_cancelled" to { orderCancelled(OrderCancelledPayload(order)) },
+            "order_shipped" to { orderShipped(OrderShippedPayload(order)) },
+            "order_refunded" to { orderRefunded(OrderRefundedPayload(order)) },
+            "order_updated" to { orderUpdated(OrderUpdatedPayload(order)) },
+            "order_product_fulfilled" to { orderProductFulfilled(OrderProductFulfilledPayload(order, product)) },
             "order_product_returned" to {
                 orderProductReturned(
-                    OrderProductPayload(
+                    OrderProductReturnedPayload(
                         order = order,
                         product = product,
                         reason = "r",
-                        totalReturnedValue = Money(amount = 0, currency = "")
+                        totalReturnedValue = Money(amount = 0.0, currency = "")
                     )
                 )
             },
@@ -126,32 +123,32 @@ class EventSpecsTest {
                     )
                 )
             },
-            "coupon_entered" to { couponEntered(CouponCheckoutPayload(coupon, checkout)) },
-            "coupon_removed" to { couponRemoved(CouponCheckoutPayload(coupon, checkout)) },
-            "coupon_denied" to { couponDenied(CouponCheckoutPayload(coupon, checkout, reason = "r")) },
-            "coupon_redeemed" to { couponRedeemed(CouponOrderPayload(coupon, order)) },
+            "order_reviewed" to { orderReviewed(OrderReviewedPayload(order, "review-1", 5.0)) },
+            "coupon_entered" to { couponEntered(CouponEnteredRemovedPayload(coupon, checkout)) },
+            "coupon_removed" to { couponRemoved(CouponEnteredRemovedPayload(coupon, checkout)) },
+            "coupon_denied" to { couponDenied(CouponDeniedPayload(coupon, checkout, reason = "r")) },
             "promotion_viewed" to { promotionViewed(PromotionPayload(promotionId = "1")) },
             "promotion_clicked" to { promotionClicked(PromotionPayload(promotionId = "1")) },
-            "payment_authorized" to { paymentAuthorized(PaymentPayload(payment)) },
-            "payment_captured" to { paymentCaptured(PaymentPayload(payment)) },
-            "payment_failed" to { paymentFailed(PaymentPayload(payment)) },
+            "payment_authorized" to { paymentAuthorized(PaymentAuthorizedPayload(payment)) },
+            "payment_captured" to { paymentCaptured(PaymentCapturedPayload(payment)) },
+            "payment_failed" to { paymentFailed(PaymentFailedPayload(payment)) },
             "payment_refunded" to {
                 paymentRefunded(
-                    PaymentPayload(
+                    PaymentRefundedPayload(
                         payment = payment,
-                        returnedAmount = Money(amount = 0, currency = "")
+                        returnedAmount = Money(amount = 0.0, currency = "")
                     )
                 )
             },
-            "referral_shared" to { referralShared(ReferralPayload(referral)) },
-            "referral_applied" to { referralApplied(ReferralPayload(referral)) },
-            "incentive_granted" to { incentiveGranted(IncentivePayload(incentive)) },
-            "incentive_redeemed" to { incentiveRedeemed(IncentivePayload(incentive)) },
-            "incentive_claimed" to { incentiveClaimed(IncentivePayload(incentive)) },
-            "incentive_expired" to { incentiveExpired(IncentivePayload(incentive)) },
-            "challenge_started" to { challengeStarted(ChallengePayload(challenge)) },
-            "challenge_completed" to { challengeCompleted(ChallengePayload(challenge)) },
-            "challenge_step_completed" to { challengeStepCompleted(ChallengePayload(challenge, step = "0")) }
+            "referral_shared" to { referralShared(ReferralSharedPayload(referral)) },
+            "referral_applied" to { referralApplied(ReferralAppliedPayload(referral)) },
+            "incentive_granted" to { incentiveGranted(IncentiveGrantedPayload(incentive)) },
+            "incentive_redeemed" to { incentiveRedeemed(IncentiveRedeemedPayload(incentive)) },
+            "incentive_claimed" to { incentiveClaimed(IncentiveClaimedPayload(incentive)) },
+            "incentive_expired" to { incentiveExpired(IncentiveExpiredPayload(incentive)) },
+            "challenge_started" to { challengeStarted(ChallengeStartedPayload(challenge)) },
+            "challenge_completed" to { challengeCompleted(ChallengeCompletedPayload(challenge)) },
+            "challenge_step_completed" to { challengeStepCompleted(ChallengeStepCompletedPayload(challenge, step = "0")) }
         )
 
         methods.forEachIndexed { index, (eventName, call) ->
@@ -169,14 +166,14 @@ class EventSpecsTest {
     fun `predefined event encodes payload as json object and omits nulls`() {
         val payload = ScreenPayload(
             title = "Home",
-            url = null,
+            url = "https://example.test/home",
             keywords = listOf("food", "delivery"),
             campaign = Campaign(source = "app", medium = "push")
         )
             .toJsonPayload()
 
         assertEquals("Home", payload["title"]?.jsonPrimitive?.content)
-        assertFalse(payload.containsKey("url"))
+        assertEquals("https://example.test/home", payload["url"]?.jsonPrimitive?.content)
         assertEquals("app", payload["campaign"]?.jsonObject?.get("source")?.jsonPrimitive?.content)
         assertFalse(payload["campaign"]!!.jsonObject.containsKey("name"))
     }
@@ -186,16 +183,16 @@ class EventSpecsTest {
         val product = Product(
             productId = "p1",
             productTitle = "Coffee",
-            price = Money(amount = 12_500, currency = "IRR"),
+            price = Money(amount = 12_500.0, currency = "IRR"),
             category = Category(id = "c1", title = "Drinks"),
             customProperties = JsonObject(mapOf("source" to JsonPrimitive("test")))
         )
 
-        val payload = ProductPayload(product).toJsonPayload()
+        val payload = ProductClickedPayload(product).toJsonPayload()
         val productJson = payload["product"]!!.jsonObject
 
         assertEquals("p1", productJson["productId"]?.jsonPrimitive?.content)
-        assertEquals(12_500, productJson["price"]?.jsonObject?.get("amount")?.jsonPrimitive?.int)
+        assertEquals(12_500.0, productJson["price"]?.jsonObject?.get("amount")?.jsonPrimitive?.double)
         assertEquals("IRR", productJson["price"]?.jsonObject?.get("currency")?.jsonPrimitive?.content)
         assertEquals("Drinks", productJson["category"]?.jsonObject?.get("title")?.jsonPrimitive?.content)
         assertEquals("test", productJson["customProperties"]?.jsonObject?.get("source")?.jsonPrimitive?.content)
@@ -260,7 +257,7 @@ class EventSpecsTest {
     fun `cart events encode cart object and custom properties`() {
         val product = Product(
             productId = "p1",
-            price = Money(amount = 10, currency = "IRR")
+            price = Money(amount = 10.0, currency = "IRR")
         )
         val cart = Cart(
             cartId = "cart-1",
@@ -273,7 +270,7 @@ class EventSpecsTest {
             cart = cart,
             customProperties = buildJsonObject { put("source", "button") }
         ).toJsonPayload()
-        val viewedPayload = CartPayload(cart).toJsonPayload()
+        val viewedPayload = CartViewedPayload(cart).toJsonPayload()
 
         assertEquals("cart-1", modificationPayload["cart"]?.jsonObject?.get("cartId")?.jsonPrimitive?.content)
         assertEquals("p1", modificationPayload["cart"]?.jsonObject?.get("products")?.jsonArray?.first()?.jsonObject?.get("productId")?.jsonPrimitive?.content)
@@ -293,22 +290,21 @@ class EventSpecsTest {
         )
         val coupon = Coupon(
             code = "SAVE",
-            amount = Money(amount = 1000, currency = "IRR"),
+            amount = Money(amount = 1000.0, currency = "IRR"),
             customProperties = buildJsonObject { put("campaign", "summer") }
         )
 
         val shippingPayload = Shipping(
-            price = Money(amount = 500, currency = "IRR"),
+            price = Money(amount = 500.0, currency = "IRR"),
             method = "standard",
             destination = address
         ).toJsonPayload()
-        val couponPayload = CouponCheckoutPayload(
+        val couponPayload = CouponEnteredRemovedPayload(
             coupon = coupon,
             checkout = Checkout(
                 order = CheckoutOrder(
                     products = emptyList(),
-                    revenue = Money(amount = 0, currency = "IRR"),
-                    total = Money(amount = 0, currency = "IRR")
+                    totalValue = Money(amount = 0.0, currency = "IRR")
                 ),
                 step = "1"
             )
