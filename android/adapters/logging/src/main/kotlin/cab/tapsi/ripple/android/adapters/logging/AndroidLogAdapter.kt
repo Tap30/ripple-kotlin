@@ -2,6 +2,7 @@ package cab.tapsi.ripple.android.adapters.logging
 
 import android.util.Log
 import cab.tapsi.ripple.core.adapters.LogLevel
+import cab.tapsi.ripple.core.adapters.LogMessageFormatter
 import cab.tapsi.ripple.core.adapters.LoggerAdapter
 
 /**
@@ -37,10 +38,6 @@ class AndroidLogAdapter(
     }
 
     private fun formatMessage(message: String, vararg args: Any?): String {
-        return if (args.isNotEmpty()) {
-            String.format(message, *args)
-        } else {
-            message
-        }
+        return LogMessageFormatter.format(message, *args)
     }
 }

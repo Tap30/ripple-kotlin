@@ -172,8 +172,13 @@ data class TelemetryHooks @JvmOverloads constructor(
 
 data class TelemetryOptions @JvmOverloads constructor(
     val endpoint: String,
-    val disabled: Boolean = false
-)
+    val disabled: Boolean = false,
+    val flushInterval: Long = 10_000L
+) {
+    init {
+        require(flushInterval > 0) { "Telemetry flush interval must be positive" }
+    }
+}
 
 data class FlushInfo(val eventCount: Int, val batchCount: Int)
 data class SendSuccessInfo(val batchSize: Int, val status: Int)

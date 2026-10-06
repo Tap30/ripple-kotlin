@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.android.library)
-    alias(libs.plugins.kotlin.android)
+    id("org.jetbrains.kotlin.android")
     id("android-publishing-convention")
     alias(libs.plugins.ksp)
 }

@@ -85,8 +85,6 @@ class Dispatcher(
         }
 
         if (config.eventSampler?.invoke(event) == false) {
-            config.hooks.onDrop?.invoke(DropInfo(eventCount = 1, reason = DropReason.SAMPLED))
-            loggerAdapter.debug("Event sampled out: ${event.name}")
             return
         }
 
@@ -219,7 +217,10 @@ class Dispatcher(
                 config.hooks.onSendSuccess?.invoke(
                     SendSuccessInfo(batchSize = events.size, status = response.status)
                 )
-                loggerAdapter.info("Batch sent successfully")
+                loggerAdapter.info(
+                    "Batch sent successfully",
+                    mapOf("status" to response.status, "data" to response.data as? String?),
+                )
                 true
             }
 
@@ -488,7 +489,7 @@ class Dispatcher(
 
     private fun serializedSize(event: Event): Long {
         return runCatching {
-            json.encodeToString(event).toByteArray(Charsets.UTF_8).size.toLong()
+            json.encodeToString(Event.serializer(), event).toByteArray(Charsets.UTF_8).size.toLong()
         }.getOrElse {
             event.toString().toByteArray(Charsets.UTF_8).size.toLong()
         }

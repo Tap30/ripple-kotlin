@@ -45,6 +45,7 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     private val metadataManager = MetadataManager()
     private val loggerAdapter = config.adapters.loggerAdapter ?: ConsoleLoggerAdapter()
     private var dispatcher: Dispatcher? = null
+    private var telemetryReporter: TelemetryReporter? = null
     private var anonymousId: String = ""
     private var userId: String? = null
     private var appState: AppState = AppState.CLOSED
@@ -95,11 +96,11 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     }
 
     internal fun trackPredefined(
-        name: String,
+        name: PredefinedEventName,
         payload: kotlinx.serialization.json.JsonObject,
         schemaVersion: String? = PREDEFINED_SCHEMA_VERSION
     ) {
-        trackInternal(name, payload, schemaVersion)
+        trackInternal(name.wireName, payload, schemaVersion)
     }
 
     // ==================== UNTYPED TRACK METHODS ====================
@@ -153,19 +154,19 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
     fun identify(userId: String, traits: UserTraits = UserTraits()) {
         this.userId = userId
         saveUserId(userId)
-        trackPredefined("user_identified", UserIdentifiedPayload(userId, traits).toJsonPayload())
+        trackPredefined(PredefinedEventName.USER_IDENTIFIED, UserIdentifiedPayload(userId, traits).toJsonPayload())
     }
 
     fun clicked(payload: ClickedPayload) {
-        trackPredefined("clicked", payload.toJsonPayload())
+        trackPredefined(PredefinedEventName.CLICKED, payload.toJsonPayload())
     }
 
     fun viewed(payload: ViewedPayload) {
-        trackPredefined("viewed", payload.toJsonPayload())
+        trackPredefined(PredefinedEventName.VIEWED, payload.toJsonPayload())
     }
 
     fun screen(payload: ScreenPayload) {
-        trackPredefined("screened", payload.toJsonPayload())
+        trackPredefined(PredefinedEventName.SCREENED, payload.toJsonPayload())
     }
 
     fun appOpened() {
@@ -180,7 +181,7 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
         val previousState = appState
         appState = newState
         trackPredefined(
-            "app_state_changed",
+            PredefinedEventName.APP_STATE_CHANGED,
             AppStateChangedPayload(newState, previousState).toJsonPayload()
         )
     }
@@ -241,6 +242,8 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
         synchronized(this) {
             dispatcher?.dispose()
             dispatcher = null
+            telemetryReporter?.dispose()
+            telemetryReporter = null
             metadataManager.clear()
             isDisposed = true
             isInitialized = false
@@ -314,8 +317,10 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
             getMetadata = { getMetadata() },
             getPlatform = { getPlatform() },
             getSdk = { getSdkInfo() },
-            generateEventId = { generateEventId() }
+            generateEventId = { generateEventId() },
+            flushInterval = options.flushInterval
         )
+        telemetryReporter = reporter
 
         return TelemetryHooks(
             onFlush = {
@@ -339,7 +344,6 @@ abstract class RippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
                 userHooks.onDrop?.invoke(it)
             },
             onEnqueue = {
-                reporter.reportEnqueue(it)
                 userHooks.onEnqueue?.invoke(it)
             }
         )

@@ -8,8 +8,12 @@ slf4j-api = "2.0.17"
 spring-boot = "3.5.9"
 spring-dependency-management = "1.1.7"
 coroutines = "1.7.3"
-serialization = "1.8.0"
-junit = "6.0.1"
+# 1.6.3 is built with Kotlin 1.9.22 and remains compatible with Kotlin 2.x.
+serialization = "1.6.3"
+# JUnit 6 is compiled with Kotlin 2.1 metadata and cannot be consumed by the
+# Kotlin 1.9 CI lane. JUnit 5.12 remains compatible with both supported lanes.
+junit = "5.12.2"
+junit-platform = "1.12.2"
 mockk = "1.14.7"
 okhttp = "4.12.0"
 nexus-publish = "2.0.0"
@@ -34,6 +38,7 @@ kotlinx-coroutines-reactive = { group = "org.jetbrains.kotlinx", name = "kotlinx
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "serialization" }
 
 junit-jupiter = { group = "org.junit.jupiter", name = "junit-jupiter", version.ref = "junit" }
+junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-platform" }
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 
 module-jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson-module-kotlin" }

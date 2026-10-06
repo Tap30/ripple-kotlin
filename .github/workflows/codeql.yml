@@ -36,7 +36,9 @@ jobs:
 
       # Install Android SDK tools + accept licenses + expose sdkmanager
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: platform-tools
 
       # Your build uses compileSdk/targetSdk 35, and autobuild previously needed build-tools 33.0.1
       - name: Install Android SDK packages needed for build
