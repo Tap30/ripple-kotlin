@@ -27,7 +27,7 @@ class AndroidRippleClient<TEvents : RippleEvent, TMetadata : RippleMetadata>(
 
     constructor(config: RippleConfig) : this(null, config)
 
-    private val platformInfo: Platform.Native by lazy(LazyThreadSafetyMode.PUBLICATION) {
+    private val platformInfo: Platform by lazy(LazyThreadSafetyMode.PUBLICATION) {
         Platform.Native(
             device = DeviceInfo(
                 name = Build.MODEL ?: "unknown",

@@ -3,7 +3,6 @@ package cab.tapsi.ripple.core
 import cab.tapsi.ripple.core.adapters.HttpAdapter
 import cab.tapsi.ripple.core.adapters.LoggerAdapter
 import cab.tapsi.ripple.core.adapters.StorageAdapter
-import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
 
@@ -106,40 +105,30 @@ data class SdkInfo(
 )
 
 /**
- * Platform information - discriminated union.
- * 
- * Per API contract:
- * - WebPlatform (type: "web") - browser, device, os
- * - NativePlatform (type: "native") - device, os  
- * - ServerPlatform (type: "server") - no additional fields
+ * Platform information as defined by the ingestion API.
+ *
+ * This is deliberately a regular object, rather than a polymorphic sealed
+ * class. The API discriminator is the `type` property, not kotlinx
+ * serialization's polymorphic discriminator (for example `_type`).
  */
 @Serializable
-sealed class Platform {
-    abstract val type: String
-    
-    @Serializable
-    @SerialName("web")
-    data class Web(
-        val browser: DeviceInfo,
-        val device: DeviceInfo,
-        val os: DeviceInfo
-    ) : Platform() {
-        override val type: String = "web"
-    }
-    
-    @Serializable
-    @SerialName("native")
-    data class Native(
-        val device: DeviceInfo,
-        val os: DeviceInfo
-    ) : Platform() {
-        override val type: String = "native"
-    }
-    
-    @Serializable
-    @SerialName("server")
-    data object Server : Platform() {
-        override val type: String = "server"
+data class Platform(
+    val type: String,
+    val browser: DeviceInfo? = null,
+    val os: DeviceInfo? = null,
+    val device: DeviceInfo? = null
+) {
+    companion object {
+        /** Compatibility value for existing `Platform.Server` call sites. */
+        val Server: Platform = Platform(type = "server")
+
+        /** Factory retained for existing `Platform.Native(...)` call sites. */
+        fun Native(device: DeviceInfo, os: DeviceInfo): Platform =
+            Platform(type = "native", os = os, device = device)
+
+        /** Factory retained for existing `Platform.Web(...)` call sites. */
+        fun Web(browser: DeviceInfo, device: DeviceInfo, os: DeviceInfo): Platform =
+            Platform(type = "web", browser = browser, os = os, device = device)
     }
 }
 
