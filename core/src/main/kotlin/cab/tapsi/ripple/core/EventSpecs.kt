@@ -338,6 +338,7 @@ data class ViewedPayload(
     val elementId: String,
     val elementType: String? = null,
     val elementTitle: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -350,12 +351,14 @@ data class AppStateChangedPayload(
 @Serializable
 data class ProductClickedPayload(
     val product: Product,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class ProductViewedPayload(
     val product: Product,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -381,6 +384,7 @@ data class CartModificationPayload(
     val product: Product,
     val cart: Cart,
     val referrer: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -391,36 +395,42 @@ data class ProductReviewedPayload(
     val rating: Double,
     val title: String? = null,
     val body: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class CartViewedPayload(
     val cart: Cart,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class CartEmptiedPayload(
     val cart: Cart,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class CheckoutStartedPayload(
     val checkout: Checkout,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class CheckoutStepPayload(
     val checkout: Checkout,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
 @Serializable
 data class OrderCompletedPayload(
     val order: Order,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -435,6 +445,7 @@ data class OrderFailedPayload(
 data class OrderCancelledPayload(
     val order: Order,
     val issuer: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -454,6 +465,7 @@ data class OrderRefundedPayload(
 data class OrderUpdatedPayload(
     val order: Order,
     val reason: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -486,6 +498,7 @@ data class OrderFulfillmentStatusUpdatedPayload(
 @Serializable
 data class ProductsSearchedPayload(
     val query: String,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -495,6 +508,7 @@ data class ProductListViewedPayload(
     val listId: String? = null,
     val category: Category? = null,
     val pagination: Pagination? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -505,6 +519,7 @@ data class ProductListFilteredPayload(
     val sorts: List<Sort>,
     val listId: String? = null,
     val category: Category? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -512,6 +527,7 @@ data class ProductListFilteredPayload(
 data class CouponEnteredRemovedPayload(
     val coupon: Coupon,
     val checkout: Checkout,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -527,6 +543,7 @@ data class CouponDeniedPayload(
 data class PromotionPayload(
     val promotionId: String,
     val promotionTitle: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -583,6 +600,7 @@ data class IncentiveRedeemedPayload(
     val incentive: Incentive,
     val redeemerId: String? = null,
     val redeemerTitle: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -591,6 +609,7 @@ data class IncentiveClaimedPayload(
     val incentive: Incentive,
     val sourceId: String? = null,
     val sourceTitle: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -603,6 +622,7 @@ data class IncentiveExpiredPayload(
 @Serializable
 data class ChallengeStartedPayload(
     val challenge: Challenge,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 
@@ -626,6 +646,7 @@ data class OrderReviewedPayload(
     val rating: Double,
     val title: String? = null,
     val body: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 

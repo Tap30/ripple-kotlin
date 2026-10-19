@@ -52,7 +52,7 @@ public class SampleController {
             null,
             null
         ));
-        rippleClient.viewed(new ViewedPayload("page-" + pageName, "page", pageName, null));
+        rippleClient.viewed(new ViewedPayload("page-" + pageName, "page", pageName, null, null));
         
         // Track API request performance
         Map<String, Object> perfPayload = new HashMap<>();
