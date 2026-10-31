@@ -326,6 +326,7 @@ data class ScreenPayload(
 ) : PayloadConvertible
 
 @Serializable
+@JvmOverloads
 data class ClickedPayload(
     val elementId: String,
     val elementType: String? = null,
