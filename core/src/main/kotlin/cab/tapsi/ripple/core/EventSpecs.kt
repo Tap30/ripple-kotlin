@@ -330,6 +330,7 @@ data class ClickedPayload(
     val elementId: String,
     val elementType: String? = null,
     val elementTitle: String? = null,
+    val campaign: Campaign? = null,
     val customProperties: JsonObject? = null
 ) : PayloadConvertible
 

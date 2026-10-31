@@ -197,6 +197,19 @@ class EventSpecsTest {
     }
 
     @Test
+    fun `clicked event encodes campaign attribution`() {
+        val payload = ClickedPayload(
+            elementId = "checkout",
+            campaign = Campaign(source = "newsletter", medium = "email", name = "spring-sale")
+        ).toJsonPayload()
+
+        val campaign = payload["campaign"]!!.jsonObject
+        assertEquals("newsletter", campaign["source"]?.jsonPrimitive?.content)
+        assertEquals("email", campaign["medium"]?.jsonPrimitive?.content)
+        assertEquals("spring-sale", campaign["name"]?.jsonPrimitive?.content)
+    }
+
+    @Test
     fun `predefined event preserves nested money category and custom properties`() {
         val product = Product(
             productId = "p1",
