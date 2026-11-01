@@ -91,7 +91,7 @@ public class SampleController {
         payload.put("timestamp", System.currentTimeMillis());
         
         rippleClient.track("user_action", payload);
-        rippleClient.clicked(new ClickedPayload(request.getTarget(), "action", request.getAction(), null));
+        rippleClient.clicked(new ClickedPayload(request.getTarget(), "action", request.getAction(), null, null));
         
         // Track the API request itself
         Map<String, Object> apiPayload = new HashMap<>();
